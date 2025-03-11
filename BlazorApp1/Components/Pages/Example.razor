@@ -1,0 +1,107 @@
+﻿@using System.Xml.Linq
+@using System.Data
+@using System.Text
+
+@page "/example"
+@rendermode InteractiveServer
+@inherits ExampleModel
+
+@inject CreditOrgInfoClient CreditService
+
+
+<h3>Данные о кредитной организации</h3>
+
+
+
+<InputNumber @bind-Value="regnum" />
+<InputDate @bind-Value="onDate" />
+<Button @onclick="LoadData2">Загрузить</Button>
+
+@if (data.Count > 0)
+{
+	<ul>
+		@foreach (var item in data)
+		{
+			<li>@item</li>
+		}
+	</ul>
+}
+else
+{
+	<p>Нет данных.</p>
+}
+
+
+
+@code {
+	private int regnum;
+	private string bankName;
+	private DateTime onDate = DateTime.Today;
+	private List<string> data = new List<string>();
+
+
+
+	private async Task LoadData()
+	{
+		bankName = await CreditService.GetBankNameByRegnum(regnum);
+
+	}
+	private async Task LoadData2()
+	{
+		//Console.OutputEncoding = Encoding.UTF8; // Устанавливаем правильную кодировку
+
+		DataSet ds = await CreditService.GetData123(regnum, onDate);
+
+		// Выведем имена таблиц
+		foreach (DataTable table in ds.Tables)
+		{
+			Console.WriteLine($"Таблица: {table.TableName}");
+
+			// Вывод заголовков колонок
+			Console.WriteLine(string.Join(" | ", table.Columns.Cast<DataColumn>().Select(col => col.ColumnName)));
+
+			// Разделитель
+			Console.WriteLine(new string('-', 50));
+
+			// Вывод всех строк
+			foreach (DataRow row in table.Rows)
+			{
+				Console.WriteLine(string.Join(" | ", row.ItemArray));
+			}
+
+			Console.WriteLine(new string('=', 50)); // Разделитель между таблицами
+		}
+		
+	}
+}
+
+
+<!--
+
+<div>
+	<input type="number" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите число" />
+	<button @onclick="@(() => SetInput(Input))">Ввод</button>
+</div>
+<div>
+	<button @onclick="@(() => SetOperation("+"))">+</button>
+	<button @onclick="@(() => SetOperation("-"))">-</button>
+	<button @onclick="@(() => SetOperation("*"))">*</button>
+	<button @onclick="@(() => SetOperation("/"))">/</button>
+	<button @onclick="@(() => SetOperation("100%"))">100%</button>
+
+</div>
+<div>
+	<input type="text" value="@Display" readonly />
+</div>
+
+<div>
+	<button @onclick="Clear">C</button>
+    <button @onclick="Calculate">=</button>
+</div>
+<div>
+	<input type="text" value="@Input" readonly />
+</div>
+-->
+
+
+
