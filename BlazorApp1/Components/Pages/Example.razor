@@ -20,6 +20,11 @@
 <InputNumber @bind-Value="regnum" />
 <InputDate @bind-Value="onDate" />
 
+<label>
+<InputCheckbox @bind-Value="showNulls" />  Показывать пустые значения
+</label>
+
+
 <Button @onclick="LoadData">Имя банка</Button>
 <Button @onclick="LoadData2">Загрузить</Button>
 
@@ -49,12 +54,14 @@ else
 					</tr>
 				</thead>
 				<tbody>
-					@foreach (DataRow row in table.Rows)
+					@foreach (DataRow row in ds.Tables[0].Rows.Cast<DataRow>()
+									.Where(row => showNulls|| !ContainsNull(row))) // Фильтрация строк с null
 					{
 						<tr>
 							@foreach (var item in row.ItemArray)
 							{
-								<td>@item</td>
+								<td>@(item ?? "NULL")</td> <!-- Отображаем null как "NULL"
+								<td>@item</td> -->
 							}
 						</tr>
 					}
@@ -62,6 +69,7 @@ else
 			</table>
 		}
 	}
+
 	
 }
 
@@ -69,24 +77,29 @@ else
 
 @code {
 
+	// можно добавить фильтрацию-поиск по колонкам
+	// https://blazor.syncfusion.com/documentation/datagrid/filtering
+
 	private int regnum = 1000;
 	private string bankName;
 	//private DateTime onDate = DateTime.Today;
 	private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
 	DataSet ds;
 	private bool isLoading = false;
+	private bool showNulls = false;
+
 
 
 	private async Task LoadData()
 	{
-	
+
 		bankName = await CreditService.GetBankNameByRegnum(regnum);
 		Console.WriteLine($"Name: {bankName}");
 
 	}
 	private async Task LoadData2()
 	{
-	
+
 		isLoading = true; // Показываем "Загрузка данных..."
 		StateHasChanged(); // Принудительно обновляем UI
 
@@ -94,12 +107,12 @@ else
 
 		isLoading = false; // Данные загружены, скрываем "Загрузка данных..."
 		StateHasChanged(); // Обновляем UI снова
-		
+
 
 		// Вывод таблиц в консоль
 		/*
 		foreach (DataTable table in ds.Tables)
-		{
+			{
 			Console.WriteLine($"Таблица: {table.TableName}");
 
 			// Вывод заголовков колонок
@@ -113,8 +126,14 @@ else
 			Console.WriteLine(new string('=', 50)); // Разделитель между таблицами
 		}
 		*/
-		
-		
+
+
+	}
+
+	// проверить содержит ли строка null-значения
+	private bool ContainsNull(DataRow row)
+	{
+		return row.ItemArray.Any(item => item == DBNull.Value || item == null);
 	}
 }
 
