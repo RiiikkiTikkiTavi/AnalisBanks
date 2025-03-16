@@ -1,6 +1,7 @@
 using BlazorApp1;
 using BlazorApp1.Components;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

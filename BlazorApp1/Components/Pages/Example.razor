@@ -1,6 +1,9 @@
 ﻿@using System.Xml.Linq
 @using System.Data
 @using System.Text
+	
+
+
 
 @page "/example"
 @rendermode InteractiveServer
@@ -13,70 +16,111 @@
 
 
 
+
 <InputNumber @bind-Value="regnum" />
 <InputDate @bind-Value="onDate" />
+
+<Button @onclick="LoadData">Имя банка</Button>
 <Button @onclick="LoadData2">Загрузить</Button>
 
-@if (data.Count > 0)
+<p>@bankName</p>
+
+@if (isLoading)
 {
-	<ul>
-		@foreach (var item in data)
-		{
-			<li>@item</li>
-		}
-	</ul>
+	<p>Загрузка данных...</p>
+}
+else if (ds == null || ds.Tables.Count == 0)
+{
+	<p>Нет данных</p>
 }
 else
 {
-	<p>Нет данных.</p>
+	@foreach (DataTable table in ds.Tables)
+	{
+		{
+			<h4>@table.TableName</h4>
+			<table class="table">
+				<thead>
+					<tr>
+						@foreach (DataColumn column in table.Columns)
+						{
+							<th>@column.ColumnName</th>
+						}
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (DataRow row in table.Rows)
+					{
+						<tr>
+							@foreach (var item in row.ItemArray)
+							{
+								<td>@item</td>
+							}
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+	
 }
 
 
 
 @code {
-	private int regnum;
-	private string bankName;
-	private DateTime onDate = DateTime.Today;
-	private List<string> data = new List<string>();
 
+	private int regnum = 1000;
+	private string bankName;
+	//private DateTime onDate = DateTime.Today;
+	private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+	DataSet ds;
+	private bool isLoading = false;
 
 
 	private async Task LoadData()
 	{
+	
 		bankName = await CreditService.GetBankNameByRegnum(regnum);
+		Console.WriteLine($"Name: {bankName}");
 
 	}
 	private async Task LoadData2()
 	{
-		//Console.OutputEncoding = Encoding.UTF8; // Устанавливаем правильную кодировку
+	
+		isLoading = true; // Показываем "Загрузка данных..."
+		StateHasChanged(); // Принудительно обновляем UI
 
-		DataSet ds = await CreditService.GetData123(regnum, onDate);
+		ds = await CreditService.GetData123(regnum, onDate);
 
-		// Выведем имена таблиц
+		isLoading = false; // Данные загружены, скрываем "Загрузка данных..."
+		StateHasChanged(); // Обновляем UI снова
+		
+
+		// Вывод таблиц в консоль
+		/*
 		foreach (DataTable table in ds.Tables)
 		{
 			Console.WriteLine($"Таблица: {table.TableName}");
 
 			// Вывод заголовков колонок
-			Console.WriteLine(string.Join(" | ", table.Columns.Cast<DataColumn>().Select(col => col.ColumnName)));
-
-			// Разделитель
-			Console.WriteLine(new string('-', 50));
-
-			// Вывод всех строк
+			Console.WriteLine(string.Join(" | ", table.Columns.Cast<DataColumn>().Select(col => col.ColumnName))); // заголовки
+			Console.WriteLine(new string('-', 50)); // разделитель
 			foreach (DataRow row in table.Rows)
 			{
-				Console.WriteLine(string.Join(" | ", row.ItemArray));
+				Console.WriteLine(string.Join(" | ", row.ItemArray)); // строки
 			}
 
 			Console.WriteLine(new string('=', 50)); // Разделитель между таблицами
 		}
+		*/
+		
 		
 	}
 }
 
 
 <!--
+	
 
 <div>
 	<input type="number" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите число" />
