@@ -57,30 +57,10 @@ namespace BlazorApp1
 
 			DataSet dataSet = new DataSet();
 
-			// Создаём MemoryStream для хранения XML
-			using (MemoryStream memoryStream = new MemoryStream())
+			////Console.WriteLine(xmlDoc.ToString());
+			using (XmlReader xmlReader = xmlDoc.CreateReader())
 			{
-				// Принудительно указываем кодировку UTF-16 через XmlWriter
-				using (XmlWriter xmlWriter = XmlWriter.Create(memoryStream, new XmlWriterSettings
-				{
-					Encoding = Encoding.Unicode,
-					Indent = true
-				}))
-				{
-					xmlDoc.Save(xmlWriter);
-				}
-				//Console.WriteLine(xmlDoc.ToString());
-
-				// Перемещаем указатель в начало потока
-				memoryStream.Position = 0;
-
-				// Читаем XML через XmlReader (гарантированно в UTF-8)
-				using (XmlReader xmlReader = XmlReader.Create(memoryStream))
-				{
-					
-					dataSet.ReadXml(xmlReader);
-					
-				}
+				dataSet.ReadXml(xmlReader); // Читаем XML
 			}
 			return dataSet;
 		}
