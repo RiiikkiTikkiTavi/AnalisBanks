@@ -92,7 +92,7 @@ else
 	private bool isLoading = false;
 	private bool showNulls = false;
 
-	private int selectedForm = 123; // ID формы по умолчанию
+	private int selectedForm;// = 123; // ID формы по умолчанию
 	private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
 
 
@@ -119,18 +119,42 @@ else
 				Console.WriteLine("form 123");
 				break;
 			case 135:
+				ds = await CreditService.GetData135(regnum, onDate);
 				Console.WriteLine("form 135");
 				break;
 			case 101:
+				ds = await CreditService.GetData101(regnum, onDate);
 				Console.WriteLine("form 101");
 				break;
 
 		}
 
-		ds = await CreditService.GetData123(regnum, onDate);
-
 		isLoading = false; // Данные загружены, скрываем "Загрузка данных..."
 		StateHasChanged(); // Обновляем UI снова
+
+		foreach (DataTable table in ds.Tables)
+		{
+			Console.WriteLine($"Таблица: {table.TableName}");
+			foreach (DataColumn column in table.Columns)
+			{
+				Console.WriteLine(string.Join(" | ", column.ColumnName));
+			}
+
+			// Вывод заголовков колонок
+			Console.WriteLine(new string('-', 50)); // разделитель
+			foreach (DataRow row in table.Rows)
+			{
+				Console.WriteLine(string.Join(" | ", row.ItemArray)); // строки
+			}
+			foreach (DataRow row in ds.Tables[0].Rows.Cast<DataRow>())
+			{
+				foreach (var item in row.ItemArray)
+				{
+					Console.WriteLine(string.Join(" | ", item));
+				}
+			}
+
+		}
 
 
 		// Вывод таблиц в консоль
@@ -148,8 +172,8 @@ else
 			}
 
 			Console.WriteLine(new string('=', 50)); // Разделитель между таблицами
-		}
-		*/
+		}*/
+		
 
 
 	}
