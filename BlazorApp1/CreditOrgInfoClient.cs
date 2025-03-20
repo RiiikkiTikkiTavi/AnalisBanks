@@ -1,4 +1,6 @@
-﻿using global::CregitInfoWS;
+﻿/* Класс для работы с загрузкой данных из ЦБ*/
+
+using global::CregitInfoWS;
 using Google.Protobuf.WellKnownTypes;
 using System;
 using System.Data;
@@ -8,9 +10,9 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace BlazorApp1
 {
-
 	public class CreditOrgInfoClient
 	{
 		private readonly CreditOrgInfoSoap _client;
@@ -28,29 +30,6 @@ namespace BlazorApp1
 		//вспомогательный метод - вывод dataset в консоль
 		private void ShowDataSet(DataSet dataSet)
 		{
-			/*foreach (DataTable table in dataSet.Tables)
-			{
-				Console.WriteLine($"Таблица: {table.TableName}");
-				foreach (DataColumn column in table.Columns)
-				{
-					Console.WriteLine(string.Join(" | ", column.ColumnName));
-				}
-
-				// Вывод заголовков колонок
-				Console.WriteLine(new string('-', 50)); // разделитель
-				foreach (DataRow row in table.Rows)
-				{
-					Console.WriteLine(string.Join(" | ", row.ItemArray)); // строки
-				}
-				foreach (DataRow row in dataSet.Tables[0].Rows.Cast<DataRow>())
-				{
-					foreach (var item in row.ItemArray)
-					{
-						Console.WriteLine(string.Join(" | ", item));
-					}
-				}
-
-			}*/
 			foreach (DataTable table in dataSet.Tables)
 			{
 				Console.WriteLine($"Таблица: {table.TableName}");
@@ -117,7 +96,7 @@ namespace BlazorApp1
 		public async Task<DataSet> GetData135(int regnum, DateTime dt)
 		{
 			// список колонок, которые необходимо убрать при выводе
-			List<string> columnsToDelete = new List<string> { "V3_2", "V3_3" }; 
+			List<string> columnsToDelete = new List<string> { "V3_2", "V3_3" };
 
 			var response = await _client.Data135FormFullAsync(regnum, dt);
 
@@ -155,13 +134,13 @@ namespace BlazorApp1
 					}
 				}
 			}
-			
+
 			ShowDataSet(dataSet);
 
 			return dataSet;
 		}
 
-		
+
 		// получение данных по форме 101 по рег. номеру банка и дате
 		public async Task<DataSet> GetData101(int regnum, DateTime dt)
 		{
@@ -204,8 +183,8 @@ namespace BlazorApp1
 
 			return dataSet;
 		}
-		
-		
+
+
 	}
 }
 

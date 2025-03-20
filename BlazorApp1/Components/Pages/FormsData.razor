@@ -1,0 +1,115 @@
+﻿@using System.Xml.Linq
+@using System.Data
+@using System.Text
+	
+
+
+@page "/formsData"
+@rendermode InteractiveServer
+
+
+
+<h3>Данные форм</h3>
+
+<select @bind="SelectedForm">
+	@foreach (int form in FormNumber)
+	{
+		<option value="@form">Форма @form</option>
+	}
+</select>
+
+
+<InputNumber @bind-Value="Regnum" />
+<InputDate @bind-Value="OnDate" />
+
+<label>
+<InputCheckbox @bind-Value="ShowNulls" />  Показывать пустые значения
+</label>
+
+<Button @onclick="LoadData">Загрузить</Button>
+
+<p>@BankName</p>
+
+@if (IsLoading)
+{
+	<p>Загрузка данных...</p>
+}
+// проверка пустой ли dataset, есть ли таблицы, есть ли строки
+else if (Ds == null || Ds.Tables.Count == 0 || Ds.Tables.Cast<DataTable>().All(t => t.Rows.Count == 0))
+{
+	<p>Нет данных</p>
+}
+else
+{
+	// вывод данных форм
+	@foreach (DataTable table in Ds.Tables)
+	{
+		{
+			<h4>@table.TableName</h4>
+			<table class="table">
+				<thead>
+					<tr>
+						@foreach (DataColumn column in table.Columns)
+						{
+							<th>@column.ColumnName</th>
+						}
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (DataRow row in Ds.Tables[0].Rows.Cast<DataRow>()
+									.Where(row => ShowNulls|| !ContainsNull(row))) // Фильтрация строк с null
+					{
+						<tr>
+							@foreach (var item in row.ItemArray)
+							{
+								<td>@(item ?? "NULL")</td> <!-- Отображаем null как "NULL" -->
+							}
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	}
+
+	
+}
+
+
+
+@code {
+
+	
+
+}
+
+
+<!--
+	
+
+<div>
+	<input type="number" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите число" />
+	<button @onclick="@(() => SetInput(Input))">Ввод</button>
+</div>
+<div>
+	<button @onclick="@(() => SetOperation("+"))">+</button>
+	<button @onclick="@(() => SetOperation("-"))">-</button>
+	<button @onclick="@(() => SetOperation("*"))">*</button>
+	<button @onclick="@(() => SetOperation("/"))">/</button>
+	<button @onclick="@(() => SetOperation("100%"))">100%</button>
+
+</div>
+<div>
+	<input type="text" value="@Display" readonly />
+</div>
+
+<div>
+	<button @onclick="Clear">C</button>
+    <button @onclick="Calculate">=</button>
+</div>
+<div>
+	<input type="text" value="@Input" readonly />
+</div>
+-->
+
+
+
