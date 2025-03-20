@@ -103,17 +103,22 @@ namespace BlazorApp1
 
 			DataSet dataSet = new DataSet();
 
-			////Console.WriteLine(xmlDoc.ToString());
 			using (XmlReader xmlReader = xmlDoc.CreateReader())
 			{
 				dataSet.ReadXml(xmlReader); // Читаем XML
 			}
+
+			ShowDataSet(dataSet);
+
 			return dataSet;
 		}
 
 		// получение данных по форме 135 по рег. номеру банка и дате
 		public async Task<DataSet> GetData135(int regnum, DateTime dt)
 		{
+			// список колонок, которые необходимо убрать при выводе
+			List<string> columnsToDelete = new List<string> { "V3_2", "V3_3" }; 
+
 			var response = await _client.Data135FormFullAsync(regnum, dt);
 
 			if (response == null || response.Nodes == null || response.Nodes.Count == 0)
@@ -127,12 +132,32 @@ namespace BlazorApp1
 
 			DataSet dataSet = new DataSet();
 
-			Console.WriteLine(xmlDoc.ToString());
 			using (XmlReader xmlReader = xmlDoc.CreateReader())
 			{
 				dataSet.ReadXml(xmlReader); // Читаем XML
 			}
+
+			// убираем пустую инфу, делаем корректный вывод
+			foreach (DataTable table in dataSet.Tables.Cast<DataTable>().ToList())
+			{
+				if (table.Rows.Count == 0) // Проверяем, пустая ли таблица
+				{
+					dataSet.Tables.Remove(table); // Удаляем таблицу
+				}
+				else // если таблица не пуста, удаляем лишние столбцы
+				{
+					foreach (var columnName in columnsToDelete)
+					{
+						if (table.Columns.Contains(columnName)) // Проверяем, есть ли столбец
+						{
+							table.Columns.Remove(columnName);
+						}
+					}
+				}
+			}
 			
+			ShowDataSet(dataSet);
+
 			return dataSet;
 		}
 
@@ -160,6 +185,8 @@ namespace BlazorApp1
 			{
 				dataSet.ReadXml(xmlReader); // Читаем XML
 			}
+
+			// убираем пустую инфу, делаем корректный вывод
 			foreach (DataTable table in dataSet.Tables)
 			{
 				var columnsToRemove = table.Columns.Cast<DataColumn>() // преобразование table.Columns в IEnumerable<DataColumn>, чтобы применить LINQ.
