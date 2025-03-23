@@ -7,8 +7,8 @@
 
 
 <div>
-	<input type="number" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите число" />
-	<button @onclick="@(() => SetInput(Input))">Ввод</button>
+	<input type="string" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите выражение" />
+	<!--<button @onclick="@(() => SetInput(Input))">Ввод</button> -->
 </div>
 <!--
 <div>
@@ -23,15 +23,11 @@
 
 
 <div>
-	<input type="text" value="@Display" readonly />
-</div>
-
-<div>
 	<button @onclick="Clear">C</button>
-	<button @onclick="Calcul">=</button>
+	<button @onclick="Calc">=</button>
 </div>
 <div>
-	<input type="text" value="@Input" readonly />
+	<input type="text" value="@Display" readonly />
 </div>
 
 @code {

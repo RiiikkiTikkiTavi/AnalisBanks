@@ -1,71 +1,39 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using MathNet.Symbolics;
+using Microsoft.AspNetCore.Components;
 
 namespace BlazorApp1.Components.Pages
 {
 	public partial class Calculate : ComponentBase
 	{
 
-		private string time = "";
-		private string val = "";
 
-		private int input = 0;
+		private string input = "";
 		private double result = 0;
-		private string operation = "";
-		private double firstNumber;
-		private string display = "";
+		private double display;
 
-		public string Time { get => time; set => time = value; }
-		public string Val { get => val; set => val = value; }
-		public string Display { get => display; set => display = value; }
-		public int Input { get => input; set => input = value; }
+		public string Input { get => input; set => input = value; }
+		public double Display { get => display; set => display = value; }
 
-		public void ShowTime()
+			
+		// метод расчета выражений
+		public void Calc()
 		{
-			Time = DateTime.Now.ToString("D");
+			var expr = Infix.ParseOrThrow(Input);
 
+			// Создаем словарь значений переменных
+			var variables = new Dictionary<string, FloatingPoint> { { ("x"), 1 } };
+
+			// Вычисляем выражение с подстановкой значений
+			Display = Evaluate.Evaluate(variables, expr).RealValue;
+
+			Console.WriteLine($"Result: {Display}");
 		}
 
-		public void SetOperation(string op)
-		{
-
-			operation = op;
-			Display += operation;
-		}
-
-		public void SetInput(int num)
-		{
-			Display += num.ToString();
-			Input = 0;
-
-		}
-		public void Calcul()
-		{
-			if (/*!string.IsNullOrEmpty(Input) && */!string.IsNullOrEmpty(operation))
-			{
-				double secondNumber = 0;// = double.Parse(Input);
-				switch (operation)
-				{
-					case "+": result = firstNumber + secondNumber; break;
-					case "-": result = firstNumber - secondNumber; break;
-					case "*": result = firstNumber * secondNumber; break;
-					case "/": result = secondNumber != 0 ? firstNumber / secondNumber : 0; break;
-
-				}
-				//Input = result.ToString();
-				operation = "";
-			}
-		}
-
+		// очистка полей
 		public void Clear()
 		{
-			Input = 0;
-			result = 0;
-			operation = "";
-			Display = "";
+			Input = "";
+			Display = 0;
 		}
-
-
-	
-
-}
+	}
 }
