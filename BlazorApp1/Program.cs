@@ -1,5 +1,7 @@
 using BlazorApp1;
 using BlazorApp1.Components;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,6 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddScoped<CreditOrgInfoClient>();
+
+// получение строки подключения
+var connectionString = builder.Configuration.GetConnectionString("PostgresConnection");
+
+// Добавляем поддержку PostgreSQL через Entity Framework Core
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+	options.UseNpgsql(connectionString));
 
 var app = builder.Build();
 
