@@ -1,0 +1,65 @@
+﻿@page "/methods"
+
+@using BlazorApp1.Models
+@inject NavigationManager NavigationManager
+@inject BanksContext DbContext
+
+
+@rendermode InteractiveServer
+
+<h3>Методики</h3>
+
+<Button Color="ButtonColor.Primary" @onclick="NewMethod">Добавить методику</Button>
+
+
+
+
+
+
+
+<!-- Подключаем модальное окно
+<MethodModal @ref="methodModal" />  -->
+@if (methods == null)
+{
+    <p>Загрузка данных...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Описание</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var method in methods)
+            {
+                <tr>
+                    <td>@method.IdMethods</td>
+                    <td>@method.Name</td>
+                    <td>@method.Descr</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Method> methods; // Список методик
+  
+
+    private void NewMethod()
+    {
+        NavigationManager.NavigateTo("/new_method");
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем данные из базы данных
+        methods = await DbContext.Methods.ToListAsync();
+    }
+
+}

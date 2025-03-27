@@ -1,0 +1,30 @@
+﻿@page "/new_method"
+
+@using BlazorApp1.Models
+
+<h3>Добавить методику</h3>
+<div>
+	<label>Название методики:</label>
+	<input @bind="NewMethod.Name" />
+</div>
+<div>
+	<label>Описание:</label>
+	<textarea @bind="NewMethod.Descr"></textarea>
+</div>
+<div>
+	<button @onclick="SaveMethod">Сохранить</button>
+	<button @onclick="Close">Отмена</button>
+</div>
+
+
+@code {
+	private string MethodName = "";
+	private string MethodDescription = "";
+
+
+	private Method NewMethod { get; set; } = new();
+
+	private void SaveMethod() { }
+	private void Close() { }
+
+}

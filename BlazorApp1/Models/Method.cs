@@ -24,4 +24,6 @@ public partial class Method
     public string? Descr { get; set; }
 
     public virtual ICollection<Argument> Arguments { get; set; } = new List<Argument>();
+
+
 }
