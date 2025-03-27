@@ -4,18 +4,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BlazorApp1.Models;
 
+// класс контекста для работы с базой через Entity Framework
+// управляет подключением к БД
 public partial class BanksContext : DbContext
 {
+    // конструктор без параметров
     public BanksContext()
     {
     }
 
+    // конструктор с настройками подключения БД
     public BanksContext(DbContextOptions<BanksContext> options)
         : base(options)
     {
     }
 
-    public virtual DbSet<ArgConsist> ArgConsists { get; set; }
+	// DbSet - коллекции, которые представляют таблицы в БД
+	public virtual DbSet<ArgConsist> ArgConsists { get; set; }
 
     public virtual DbSet<Argument> Arguments { get; set; }
 
@@ -35,22 +40,29 @@ public partial class BanksContext : DbContext
 
     public virtual DbSet<TemplatesNor> TemplatesNors { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+
+   /* protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseNpgsql("Host=localhost;Database=banks;Username=admin;Password=password");
+   */
 
+
+    // метод для связывания таблиц и свойств моделей
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<ArgConsist>(entity =>
         {
-            entity.HasKey(e => e.IdArgConsist).HasName("arg_consist_pkey");
+			// HasKey - первичный ключ
+			entity.HasKey(e => e.IdArgConsist).HasName("arg_consist_pkey");
 
-            entity.ToTable("arg_consist", tb => tb.HasComment("Таблица содержит состав показателей методик"));
+            // связывание таблицы с сущностью
+			entity.ToTable("arg_consist", tb => tb.HasComment("Таблица содержит состав показателей методик"));
+
 
             entity.Property(e => e.IdArgConsist)
                 .ValueGeneratedNever()
                 .HasComment("Id строки")
-                .HasColumnName("id_arg_consist");
+                .HasColumnName("id_arg_consist"); // задание имени колонки в БД
             entity.Property(e => e.IdArg)
                 .HasComment("Id показателя")
                 .HasColumnName("id_arg");
@@ -61,15 +73,16 @@ public partial class BanksContext : DbContext
                 .HasComment("Id строки из 123/135 форм (код норматива)")
                 .HasColumnName("id_tnor");
 
-            entity.HasOne(d => d.IdArgNavigation).WithMany(p => p.ArgConsists)
-                .HasForeignKey(d => d.IdArg)
+            // создание внешнего ключа
+            entity.HasOne(d => d.IdArgNavigation).WithMany(p => p.ArgConsists) // указание типа связи
+                .HasForeignKey(d => d.IdArg) // указание внешнего ключа
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("arg_consist_id_arg_fkey");
+                .HasConstraintName("arg_consist_id_arg_fkey"); // имя ограничения в таблице
 
-            entity.HasOne(d => d.IdT101Navigation).WithMany(p => p.ArgConsists)
+			entity.HasOne(d => d.IdT101Navigation).WithMany(p => p.ArgConsists)
                 .HasForeignKey(d => d.IdT101)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("arg_consist_id_t101_fkey");
+                .HasConstraintName("arg_consist_id_t101_fkey"); 
 
             entity.HasOne(d => d.IdTnorNavigation).WithMany(p => p.ArgConsists)
                 .HasForeignKey(d => d.IdTnor)
@@ -323,5 +336,6 @@ public partial class BanksContext : DbContext
         OnModelCreatingPartial(modelBuilder);
     }
 
-    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+	// метод, если нужно дополнительно настроить модель в другом файле
+	partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
