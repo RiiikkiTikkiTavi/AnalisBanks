@@ -1,6 +1,10 @@
 ﻿@page "/new_method"
 
 @using BlazorApp1.Models
+@inject BanksContext db
+
+
+@rendermode InteractiveServer
 
 <h3>Добавить методику</h3>
 <div>
@@ -18,13 +22,46 @@
 
 
 @code {
-	private string MethodName = "";
-	private string MethodDescription = "";
-
 
 	private Method NewMethod { get; set; } = new();
 
-	private void SaveMethod() { }
-	private void Close() { }
+
+	private async Task SaveMethod()
+	{
+		Console.WriteLine("SaveMethod");
+		
+			var entry = db.Entry(NewMethod);
+
+			// Получаем Id сущности, если она отслеживается
+			//if (entry.State == EntityState.Added || entry.State == EntityState.Modified || entry.State == EntityState.Unchanged)
+			//{
+				var id = entry.Property("IdMethods").CurrentValue;
+				Console.WriteLine("ID отслеживаемой сущности: " + id);
+		Console.WriteLine(NewMethod.IdMethods);
+		Console.WriteLine(NewMethod.Name);
+		Console.WriteLine(NewMethod.Descr);
+		db.Methods.Add(NewMethod);
+		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
+		//}
+			// Добавление
+			/*if (db.Entry(NewMethod).State == EntityState.Detached)
+			{
+				db.Methods.Add(NewMethod);
+				await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
+				Console.WriteLine("ID новой сущности: " + NewMethod.IdMethods);
+			}*/
+		}
+
+
+
+
+
+	
+	private void Close()
+	{
+		Console.WriteLine("Close Method");
+		//NewMethod = new Method(); // Очистить данные формы, например
+		
+	}
 
 }

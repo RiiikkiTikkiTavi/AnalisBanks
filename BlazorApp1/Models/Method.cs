@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BlazorApp1.Models;
 
@@ -8,10 +9,11 @@ namespace BlazorApp1.Models;
 /// </summary>
 public partial class Method
 {
-    /// <summary>
-    /// Id методики
-    /// </summary>
-    public int IdMethods { get; set; }
+	/// <summary>
+	/// Id методики
+	/// </summary>
+	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+	public int IdMethods { get; set; }
 
     /// <summary>
     /// Наименование методики

@@ -129,7 +129,7 @@ public partial class BanksContext : DbContext
         {
             entity.HasKey(e => e.Regnum).HasName("banks_pkey");
 
-            entity.ToTable("banks", tb => tb.HasComment("Таблица содержит список банков и их регистрационные номера"));
+			entity.ToTable("banks", tb => tb.HasComment("Таблица содержит список банков и их регистрационные номера"));
 
             entity.Property(e => e.Regnum)
                 .ValueGeneratedNever()
@@ -236,8 +236,8 @@ public partial class BanksContext : DbContext
 
             entity.ToTable("methods", tb => tb.HasComment("Таблица содержит список методик"));
 
-            entity.Property(e => e.IdMethods)
-                .ValueGeneratedNever()
+			entity.Property(e => e.IdMethods)
+                .ValueGeneratedOnAdd()
                 .HasComment("Id методики")
                 .HasColumnName("id_methods");
             entity.Property(e => e.Descr)
