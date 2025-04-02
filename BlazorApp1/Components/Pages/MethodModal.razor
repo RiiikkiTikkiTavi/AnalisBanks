@@ -24,23 +24,60 @@
 </div>
 
 
-<style>
-    .title {
-        font-size: 24px;
-        font-weight: bold;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-	.form-group {
-		margin-bottom: 15px;
+@if (isCreateMode)
+    {
+	<div>
+	<h5 class="mt-4">Добавить показатели</h5>
+	<button class="btn btn-secondary" @onclick="AddArg">Добавить</button>
+		@if (args != null)
+		{
+			<table class="table">
+				<thead>
+					<tr>
+						<th>Название</th>
+						<th>Краткое название</th>
+						<th>Описание</th>
+						<th>Формула</th>
+					</tr>
+				</thead>
+				<tbody>
+					@foreach (var a in args)
+					{
+						<tr>
+							<td>@a.Name</td>
+							<td>@a.ShortName</td>
+							<td>@a.Descr</td>
+							<td>@a.Expression</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		}
+	@if (isNewArg)
+	{
+		<div class="mt-3 d-flex gap-3">
+			<input class="form-control w-25" placeholder="Введите название" @bind="Arg.Name" />
+			<input class="form-control w-25" placeholder="Введите краткое название" @bind="Arg.ShortName" />
+			<input class="form-control flex-grow-1" placeholder="Введите описание" @bind="Arg.Descr" />
+		</div>
+		<div class="mt-3">
+			<input class="form-control" placeholder="Введите формулу" @bind="Arg.Expression" />
+		</div>
+			<button class="btn btn-secondary mt-3" @onclick="CreateArg">Создать</button>
 	}
-</style>
+</div>
+	}
 
 
 @code {
 
 	private Method NewMethod { get; set; } = new();
+	private Argument Arg { get; set; } = new();
+	private List<Argument> args;
+	private bool isCreateMode = false;
+	private bool isNewArg = false;
+	private int idMeth;
+
 
 
 	private async Task SaveMethod()
@@ -50,20 +87,43 @@
 			return;
 		}
 		var entry = db.Entry(NewMethod);
+		
 		db.Methods.Add(NewMethod);
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-		NavigationManager.NavigateTo("/methods");
+		//NavigationManager.NavigateTo("/methods");
+		idMeth = NewMethod.IdMethods;
 		Console.WriteLine("SaveMethod");
+		isCreateMode = true;
+
 
 	}
 
-
+	// закрыть форму создания методик
 	private void Close()
 	{
 		NavigationManager.NavigateTo("/methods");
 		Console.WriteLine("Close Method");
 		//NewMethod = new Method(); // Очистить данные формы, например
-		
+
+	}
+
+	// показать форму создания показателей
+	private void AddArg()
+	{
+		isNewArg = true;
+
+	}
+
+	// создать показатель
+	private async Task CreateArg()
+	{
+		var entry = db.Entry(Arg);
+		Arg.IdMethods = idMeth;
+		// Arg.Consist = 
+		db.Arguments.Add(Arg);
+		await db.SaveChangesAsync();
+		Console.WriteLine("CreateArg");
+		StateHasChanged();
 	}
 
 }

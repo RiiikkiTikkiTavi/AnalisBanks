@@ -60,7 +60,7 @@ public partial class BanksContext : DbContext
 
 
             entity.Property(e => e.IdArgConsist)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_arg_consist"); // задание имени колонки в БД
             entity.Property(e => e.IdArg)
@@ -97,7 +97,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("arguments", tb => tb.HasComment("Таблица содержит список показателей, входящих в методики"));
 
             entity.Property(e => e.IdArg)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id показателя")
                 .HasColumnName("id_arg");
             entity.Property(e => e.Consist)
@@ -147,7 +147,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("data101", tb => tb.HasComment("Таблица содержит данные 101 формы для банка на дату"));
 
             entity.Property(e => e.Id101)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_101");
             entity.Property(e => e.IdInfo)
@@ -183,7 +183,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("data_nor", tb => tb.HasComment("Таблица содержит данные 123/135 форм для банка на дату"));
 
             entity.Property(e => e.IdNor)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_nor");
             entity.Property(e => e.IdInfo)
@@ -215,7 +215,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("form_info", tb => tb.HasComment("Таблица содержит шапку данных форм"));
 
             entity.Property(e => e.IdInfo)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_info");
             entity.Property(e => e.Dt)
@@ -255,7 +255,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("methods_result", tb => tb.HasComment("Таблица содержит расчитанные показатели по методикам для банка на дату"));
 
             entity.Property(e => e.IdRes)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_res");
             entity.Property(e => e.IdArg)
@@ -287,7 +287,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("templates_101", tb => tb.HasComment("Таблица содержит струкутру 101 формы"));
 
             entity.Property(e => e.IdT101)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_t101");
             entity.Property(e => e.AP)
@@ -315,7 +315,7 @@ public partial class BanksContext : DbContext
             entity.ToTable("templates_nor", tb => tb.HasComment("Таблица содержит струкутру 123 и 135 форм"));
 
             entity.Property(e => e.IdTnor)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasComment("Id строки")
                 .HasColumnName("id_tnor");
             entity.Property(e => e.Code)
