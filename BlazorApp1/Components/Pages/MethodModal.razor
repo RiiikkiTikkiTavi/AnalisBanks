@@ -2,23 +2,40 @@
 
 @using BlazorApp1.Models
 @inject BanksContext db
+@inject NavigationManager NavigationManager
 
 
 @rendermode InteractiveServer
 
-<h3>Добавить методику</h3>
+<h3 class="text-center mt-4">Добавить методику</h3>
 <div>
-	<label>Название методики:</label>
-	<input @bind="NewMethod.Name" />
+<div class="mb-3">
+	<label class="form-label">Название методики:</label>
+	<input class="form-control w-50" @bind="NewMethod.Name" />
 </div>
-<div>
-	<label>Описание:</label>
-	<textarea @bind="NewMethod.Descr"></textarea>
+<div class="mb-3">
+	<label class="form-label">Описание:</label>
+	<textarea class="form-control w-50" @bind="NewMethod.Descr"></textarea>
 </div>
-<div>
-	<button @onclick="SaveMethod">Сохранить</button>
-	<button @onclick="Close">Отмена</button>
+<div class="d-flex">
+	<button class="btn btn-primary me-2" @onclick="SaveMethod">Сохранить</button>
+	<button class="btn btn-secondary" @onclick="Close">Отмена</button>
 </div>
+</div>
+
+
+<style>
+    .title {
+        font-size: 24px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+	.form-group {
+		margin-bottom: 15px;
+	}
+</style>
 
 
 @code {
@@ -28,37 +45,22 @@
 
 	private async Task SaveMethod()
 	{
-		Console.WriteLine("SaveMethod");
-		
-			var entry = db.Entry(NewMethod);
-
-			// Получаем Id сущности, если она отслеживается
-			//if (entry.State == EntityState.Added || entry.State == EntityState.Modified || entry.State == EntityState.Unchanged)
-			//{
-				var id = entry.Property("IdMethods").CurrentValue;
-				Console.WriteLine("ID отслеживаемой сущности: " + id);
-		Console.WriteLine(NewMethod.IdMethods);
-		Console.WriteLine(NewMethod.Name);
-		Console.WriteLine(NewMethod.Descr);
+		if (string.IsNullOrWhiteSpace(NewMethod.Name) || string.IsNullOrWhiteSpace(NewMethod.Descr))
+		{
+			return;
+		}
+		var entry = db.Entry(NewMethod);
 		db.Methods.Add(NewMethod);
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-		//}
-			// Добавление
-			/*if (db.Entry(NewMethod).State == EntityState.Detached)
-			{
-				db.Methods.Add(NewMethod);
-				await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-				Console.WriteLine("ID новой сущности: " + NewMethod.IdMethods);
-			}*/
-		}
+		NavigationManager.NavigateTo("/methods");
+		Console.WriteLine("SaveMethod");
+
+	}
 
 
-
-
-
-	
 	private void Close()
 	{
+		NavigationManager.NavigateTo("/methods");
 		Console.WriteLine("Close Method");
 		//NewMethod = new Method(); // Очистить данные формы, например
 		
