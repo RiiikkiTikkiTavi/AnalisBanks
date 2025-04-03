@@ -17,7 +17,7 @@
 }
 else
 {
-    <table class="table">
+    <table class="table" oncontextmenu="return false;">
         <thead>
             <tr>
                 <th>ID</th>
@@ -28,7 +28,7 @@ else
         <tbody>
             @foreach (var method in methods)
             {
-                <tr>
+                <tr @oncontextmenu="e => ShowContextMenu(e, method)">
                     <td>@method.IdMethods</td>
                     <td>@method.Name</td>
                     <td>@method.Descr</td>
@@ -38,8 +38,30 @@ else
     </table>
 }
 
+<!-- Контекстное меню -->
+@if (showMenu)
+{
+    <div class="context-menu" style="top:@menuY; left:@menuX;">
+        <ul class="dropdown-menu show">
+            <li><a class="dropdown-item" @onclick="EditMethod">Редактировать</a></li>
+            <li><a class="dropdown-item text-danger" @onclick="DeleteMethod">Удалить</a></li>
+        </ul>
+    </div>
+}
+
+<style>
+    .context-menu {
+        position: absolute;
+        z-index: 1000;
+    }
+</style>
+
 @code {
     private List<Method> methods; // Список методик
+    private bool showMenu = false;
+    private string menuX = "0px";
+    private string menuY = "0px";
+    private Method? selectedMethod;
   
 
     private void NewMethod()
@@ -47,11 +69,42 @@ else
         NavigationManager.NavigateTo("/new_method");
     }
 
+    private async Task LoadMethods()
+    {
+        methods = await DbContext.Methods.ToListAsync();
+    }
 
     protected override async Task OnInitializedAsync()
     {
         // Загружаем данные из базы данных
-        methods = await DbContext.Methods.ToListAsync();
+        await LoadMethods();
+    }
+
+    private void ShowContextMenu(MouseEventArgs e, Method method)
+    {
+        selectedMethod = method;
+        showMenu = true;
+        menuX = $"{e.ClientX}px";
+        menuY = $"{e.ClientY}px";
+        StateHasChanged();
+    }
+    private void EditMethod()
+    {
+        if (selectedMethod != null)
+        {
+            NavigationManager.NavigateTo($"/edit_method/{selectedMethod.IdMethods}");
+        }
+        showMenu = false;
+    }
+    private async Task DeleteMethod()
+    {
+        if (selectedMethod != null)
+        {
+            DbContext.Methods.Remove(selectedMethod);
+            await DbContext.SaveChangesAsync();
+            await LoadMethods();
+        }
+        showMenu = false;
     }
 
 }
