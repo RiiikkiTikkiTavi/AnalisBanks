@@ -1,4 +1,5 @@
-﻿@page "/new_method"
+﻿@page "/new_method/{idMeth:int}"
+@* @page "/edit_method/{id:int}" *@
 
 @using BlazorApp1.Models
 @inject BanksContext db
@@ -70,26 +71,39 @@
 
 
 @code {
+	[Parameter]
+	public int idMeth { get; set; }
 
 	private Method NewMethod { get; set; } = new();
 	private Argument Arg { get; set; } = new();
 	private List<Argument> args;
 	private bool isCreateMode = false;
 	private bool isNewArg = false;
-	private int idMeth;
+	//private int idMeth;
 
+	protected override async Task OnInitializedAsync()
+	{
+		NewMethod = await db.Methods.FindAsync(idMeth);
+		if (NewMethod != null)
+		{
+			args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
+        }
+    }
 
 
 	private async Task SaveMethod()
 	{
+
+		//NewMethod = await db.Methods.FindAsync(idMeth);
+		//if (NewMethod == null)
 		if (string.IsNullOrWhiteSpace(NewMethod.Name) || string.IsNullOrWhiteSpace(NewMethod.Descr))
 		{
 			return;
 		}
 		var entry = db.Entry(NewMethod);
 		
-		db.Methods.Add(NewMethod);
-		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
+		//db.Methods.Add(NewMethod);
+		//await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
 		//NavigationManager.NavigateTo("/methods");
 		idMeth = NewMethod.IdMethods;
 		Console.WriteLine("SaveMethod");
