@@ -1,5 +1,5 @@
 ﻿@page "/new_method/{idMeth:int}"
-@* @page "/edit_method/{id:int}" *@
+@page "/new_method"
 
 @using BlazorApp1.Models
 @inject BanksContext db
@@ -19,16 +19,18 @@
 	<textarea class="form-control w-50" @bind="NewMethod.Descr"></textarea>
 </div>
 <div class="d-flex">
-	<button class="btn btn-primary me-2" @onclick="SaveMethod">Сохранить</button>
+		<button class="btn btn-primary me-2" @onclick="OnSaveClick">
+			@(IsEditMode ? "Сохранить изменения" : "Создать методику")
+		</button>
 	<button class="btn btn-secondary" @onclick="Close">Отмена</button>
 </div>
 </div>
 
 
-@if (isCreateMode)
+@if (IsEditMode)
     {
 	<div>
-	<h5 class="mt-4">Добавить показатели</h5>
+	<h5 class="mt-4">Показатели</h5>
 	<button class="btn btn-secondary" @onclick="AddArg">Добавить</button>
 		@if (args != null)
 		{
@@ -72,26 +74,40 @@
 
 @code {
 	[Parameter]
-	public int idMeth { get; set; }
+	public int ?idMeth { get; set; }
+	private bool IsEditMode => idMeth.HasValue;
 
 	private Method NewMethod { get; set; } = new();
 	private Argument Arg { get; set; } = new();
 	private List<Argument> args;
 	private bool isCreateMode = false;
 	private bool isNewArg = false;
-	//private int idMeth;
 
 	protected override async Task OnInitializedAsync()
 	{
-		NewMethod = await db.Methods.FindAsync(idMeth);
-		if (NewMethod != null)
+		if (IsEditMode)
 		{
-			args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
-        }
-    }
+			var method = await db.Methods.FindAsync(idMeth.Value);
+			if (method != null)
+			{
+				NewMethod = method;
+				args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
+			}
+		}
+	}
 
-
-	private async Task SaveMethod()
+	private async Task OnSaveClick()
+	{
+		if (IsEditMode)
+		{
+			
+		}
+		else
+		{
+			SaveMethod();
+		}
+	}
+		private async Task SaveMethod()
 	{
 
 		//NewMethod = await db.Methods.FindAsync(idMeth);
@@ -102,12 +118,11 @@
 		}
 		var entry = db.Entry(NewMethod);
 		
-		//db.Methods.Add(NewMethod);
-		//await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-		//NavigationManager.NavigateTo("/methods");
+		db.Methods.Add(NewMethod);
+		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
 		idMeth = NewMethod.IdMethods;
 		Console.WriteLine("SaveMethod");
-		isCreateMode = true;
+		//IsEditMode = true;
 
 
 	}
