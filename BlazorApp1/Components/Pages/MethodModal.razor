@@ -8,7 +8,9 @@
 
 @rendermode InteractiveServer
 
-<h3 class="text-center mt-4">Добавить методику</h3>
+<h3 class="text-center mt-4">
+	@(IsEditMode ? "Изменить методику" : "Добавить методику")
+</h3>
 <div>
 <div class="mb-3">
 	<label class="form-label">Название методики:</label>
@@ -71,6 +73,14 @@
 </div>
 	}
 
+@if (showValidationMessage)
+{
+	<div class="alert alert-warning alert-dismissible fade show mt-2" role="alert">
+		Заполните данные
+		<button type="button" class="btn-close" @onclick="() => showValidationMessage = false"></button>
+	</div>
+}
+
 
 @code {
 	[Parameter]
@@ -80,8 +90,9 @@
 	private Method NewMethod { get; set; } = new();
 	private Argument Arg { get; set; } = new();
 	private List<Argument> args;
-	private bool isCreateMode = false;
 	private bool isNewArg = false;
+
+	private bool showValidationMessage = false;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -100,59 +111,68 @@
 	{
 		if (IsEditMode)
 		{
-			
+			UpdadeMethod();
 		}
 		else
 		{
 			SaveMethod();
 		}
 	}
-		private async Task SaveMethod()
+	private async Task SaveMethod()
 	{
-
-		//NewMethod = await db.Methods.FindAsync(idMeth);
-		//if (NewMethod == null)
 		if (string.IsNullOrWhiteSpace(NewMethod.Name) || string.IsNullOrWhiteSpace(NewMethod.Descr))
 		{
+			showValidationMessage = true;
 			return;
 		}
-		var entry = db.Entry(NewMethod);
-		
-		db.Methods.Add(NewMethod);
+		showValidationMessage = false;
+		db.Methods.Add(NewMethod);	// обновление
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-		idMeth = NewMethod.IdMethods;
-		Console.WriteLine("SaveMethod");
-		//IsEditMode = true;
-
-
+		idMeth = NewMethod.IdMethods; // создание id методики
+		StateHasChanged();
+		Console.WriteLine("Save Method");
 	}
 
-	// закрыть форму создания методик
+	private async Task UpdadeMethod()
+	{
+		if (string.IsNullOrWhiteSpace(NewMethod.Name) || string.IsNullOrWhiteSpace(NewMethod.Descr))
+		{
+			showValidationMessage = true; // сообщение заполнить данные
+			return;
+		}
+		showValidationMessage = false; // убрать сообщение
+		db.Methods.Update(NewMethod);  // запись
+		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
+		idMeth = NewMethod.IdMethods; // создание id методики
+		StateHasChanged();
+		Console.WriteLine("Update Method");
+	}
+	// закрыть форму создания методик, переход на список методик
 	private void Close()
 	{
 		NavigationManager.NavigateTo("/methods");
 		Console.WriteLine("Close Method");
-		//NewMethod = new Method(); // Очистить данные формы, например
-
 	}
 
 	// показать форму создания показателей
 	private void AddArg()
 	{
 		isNewArg = true;
-
+		Console.WriteLine("Show arguments form");
 	}
 
 	// создать показатель
 	private async Task CreateArg()
 	{
-		var entry = db.Entry(Arg);
-		Arg.IdMethods = idMeth;
+		Arg.IdMethods = idMeth; // установка номера методики для показателя
 		// Arg.Consist = 
-		db.Arguments.Add(Arg);
-		await db.SaveChangesAsync();
-		Console.WriteLine("CreateArg");
+		db.Arguments.Add(Arg); // запись показателя
+		await db.SaveChangesAsync(); // сохранение
+		args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync(); // обновление списка показателей в методике
+		Arg = new Argument(); // обнуление, создание нового объекта показателей
+
 		StateHasChanged();
+		Console.WriteLine("CreateArg");
 	}
 
 }
