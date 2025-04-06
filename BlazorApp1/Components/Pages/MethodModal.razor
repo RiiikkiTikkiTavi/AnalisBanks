@@ -34,7 +34,7 @@
 	<div>
 	<h5 class="mt-4">Показатели</h5>
 	<button class="btn btn-secondary" @onclick="AddArg">Добавить</button>
-		@if (args != null)
+		@if (args != null && args.Any())
 		{
 			<table class="table">
 				<thead>
