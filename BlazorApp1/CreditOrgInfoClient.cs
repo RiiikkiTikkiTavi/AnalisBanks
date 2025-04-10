@@ -1,5 +1,6 @@
 ﻿/* Класс для работы с загрузкой данных из ЦБ*/
 
+using BlazorApp1.Models;
 using global::CregitInfoWS;
 using Google.Protobuf.WellKnownTypes;
 using System;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BlazorApp1
@@ -182,10 +184,11 @@ namespace BlazorApp1
 			ShowDataSet(dataSet);
 
 			return dataSet;
-		}
+        }
 
 
-	}
+
+    }
 }
 
 

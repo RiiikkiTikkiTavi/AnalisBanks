@@ -1,6 +1,7 @@
 ﻿@page "/formsTemplate"
 
 @using BlazorApp1.Models
+@using System.Data
 @inject NavigationManager NavigationManager
 @inject BanksContext db
 
@@ -15,6 +16,8 @@
         <option value="@form">Форма @form</option>
     }
 </select>
+<button class="btn btn-primary me-2" @onclick="LoadDataNor">Загрузить</button>
+
 
 @if (nors == null)
 {
@@ -25,7 +28,7 @@ else{
     <thead>
         <tr>
             <th>ID</th>
-            <th>Название</th>
+               <!-- <th>Название</th>-->
         </tr>
     </thead>
     <tbody>
@@ -33,7 +36,7 @@ else{
         {
             <tr>
                 <td>@nor.Code</td>
-                <td>@nor.Name</td>
+                    <!--<td>@nor.Name</td>-->
             </tr>
         }
     </tbody>
@@ -46,6 +49,10 @@ else{
     private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
     public int SelectedForm { get => selectedForm; set => selectedForm = value; }
     public List<int> FormNumber { get => formNumber; set => formNumber = value; }
+    private CreditOrgInfoClient _creditService;
+
+    [Inject]
+    public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
     private List<TemplatesNor> nors; // шаблон нормативов 123/135
 
@@ -60,5 +67,34 @@ else{
         // Загружаем данные из базы данных
         await LoadMethods();
     }
+
+    public async void LoadDataNor()
+    {
+        DataSet dataSet;
+        DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+        dataSet = await CreditService.GetData123(1000, onDate);
+
+
+        if (dataSet == null || dataSet.Tables.Count == 0){}
+        DataTable table = dataSet.Tables[0];
+
+        var nors = new TemplatesNor();
+        foreach (DataRow row in table.Rows)
+        {
+            nors.Code = row["C3"].ToString();
+            //nors.Name = row["Descr"].ToString();
+        };
+
+            db.TemplatesNors.Add(nors);
+    
+
+db.SaveChanges();
+}
+
+
+
+
+
+		}
 
 }
