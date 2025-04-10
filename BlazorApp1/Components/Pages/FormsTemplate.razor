@@ -1,0 +1,64 @@
+﻿@page "/formsTemplate"
+
+@using BlazorApp1.Models
+@inject NavigationManager NavigationManager
+@inject BanksContext db
+
+
+@rendermode InteractiveServer
+
+<h3>Шаблоны форм</h3>
+
+<select @bind="SelectedForm">
+    @foreach (int form in FormNumber)
+    {
+        <option value="@form">Форма @form</option>
+    }
+</select>
+
+@if (nors == null)
+{
+    <p></p>
+}
+else{
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Название</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var nor in nors)
+        {
+            <tr>
+                <td>@nor.Code</td>
+                <td>@nor.Name</td>
+            </tr>
+        }
+    </tbody>
+</table>
+}
+
+
+@code {
+    private int selectedForm = 135; // ID формы по умолчанию
+    private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
+    public int SelectedForm { get => selectedForm; set => selectedForm = value; }
+    public List<int> FormNumber { get => formNumber; set => formNumber = value; }
+
+    private List<TemplatesNor> nors; // шаблон нормативов 123/135
+
+
+    private async Task LoadMethods()
+    {
+        nors = await db.TemplatesNors.ToListAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем данные из базы данных
+        await LoadMethods();
+    }
+
+}
