@@ -56,11 +56,21 @@ else
 	public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
 	private List<TemplatesNor> nors; // шаблон нормативов 123/135
+	private List<Templates101> t101; // шаблон нормативов 123/135
 
 
 	private async Task LoadMethods()
 	{
-		nors = await db.TemplatesNors.ToListAsync();
+		if (SelectedForm == 123 || SelectedForm == 135)
+		{
+
+			nors = await db.TemplatesNors.ToListAsync();
+		}
+		else
+		{
+			t101 = await db.Templates101s.ToListAsync();
+		}
+		StateHasChanged();
 	}
 
 	protected override async Task OnInitializedAsync()
@@ -69,6 +79,34 @@ else
 		await LoadMethods();
 	}
 
+
+	// заполнение шаблона 101 формы 
+	/*
+	public async void LoadDataNor()
+	{
+		DataSet dataSet;
+		DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+		dataSet = await CreditService.GetData101(1000, onDate);
+
+
+		if (dataSet == null || dataSet.Tables.Count == 0)
+		{
+			return;
+		}
+		DataTable table = dataSet.Tables[0];
+
+
+		foreach (DataRow row in table.Rows)
+		{
+			var t101 = new Templates101();
+			t101.Plan = Convert.ToChar(row["pln"]);
+			t101.AP = row["ap"].ToString();
+			t101.Name = row["numsc"].ToString();
+			db.Templates101s.Add(t101);
+			db.SaveChanges();
+		};
+	}
+	*/
 
 	// заполнение шаблона 135 формы
 	/*

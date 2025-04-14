@@ -21,6 +21,7 @@ public partial class Templates101
     /// <summary>
     /// Номер счета 1-го, 2-го порядка или суммы БС2
     /// </summary>
+    /// не используется
     public string? NumSc { get; set; }
 
     /// <summary>
@@ -31,7 +32,7 @@ public partial class Templates101
     /// <summary>
     /// Признак счета (А/П)
     /// </summary>
-    public char? AP { get; set; }
+    public string? AP { get; set; }
 
     public virtual ICollection<ArgConsist> ArgConsists { get; set; } = new List<ArgConsist>();
 
