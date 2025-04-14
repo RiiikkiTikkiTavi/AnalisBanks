@@ -11,90 +11,121 @@
 <h3>Шаблоны форм</h3>
 
 <select @bind="SelectedForm">
-    @foreach (int form in FormNumber)
-    {
-        <option value="@form">Форма @form</option>
-    }
+	@foreach (int form in FormNumber)
+	{
+		<option value="@form">Форма @form</option>
+	}
 </select>
 <button class="btn btn-primary me-2" @onclick="LoadDataNor">Загрузить</button>
 
 
 @if (nors == null)
 {
-    <p></p>
+	<p></p>
 }
-else{
-<table class="table">
-    <thead>
-        <tr>
-            <th>ID</th>
-               <!-- <th>Название</th>-->
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var nor in nors)
-        {
-            <tr>
-                <td>@nor.Code</td>
-                    <!--<td>@nor.Name</td>-->
-            </tr>
-        }
-    </tbody>
-</table>
+else
+{
+	<table class="table">
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Название</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var nor in nors)
+			{
+				<tr>
+					<td>@nor.Code</td>
+					<td>@nor.Name</td>
+				</tr>
+			}
+		</tbody>
+	</table>
 }
 
 
 @code {
-    private int selectedForm = 135; // ID формы по умолчанию
-    private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
-    public int SelectedForm { get => selectedForm; set => selectedForm = value; }
-    public List<int> FormNumber { get => formNumber; set => formNumber = value; }
-    private CreditOrgInfoClient _creditService;
+	private int selectedForm = 135; // ID формы по умолчанию
+	private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
+	public int SelectedForm { get => selectedForm; set => selectedForm = value; }
+	public List<int> FormNumber { get => formNumber; set => formNumber = value; }
+	private CreditOrgInfoClient _creditService;
 
-    [Inject]
-    public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
+	[Inject]
+	public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
-    private List<TemplatesNor> nors; // шаблон нормативов 123/135
-
-
-    private async Task LoadMethods()
-    {
-        nors = await db.TemplatesNors.ToListAsync();
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Загружаем данные из базы данных
-        await LoadMethods();
-    }
-
-    public async void LoadDataNor()
-    {
-        DataSet dataSet;
-        DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
-        dataSet = await CreditService.GetData123(1000, onDate);
+	private List<TemplatesNor> nors; // шаблон нормативов 123/135
 
 
-        if (dataSet == null || dataSet.Tables.Count == 0){}
-        DataTable table = dataSet.Tables[0];
+	private async Task LoadMethods()
+	{
+		nors = await db.TemplatesNors.ToListAsync();
+	}
 
-        var nors = new TemplatesNor();
-        foreach (DataRow row in table.Rows)
-        {
-            nors.Code = row["C3"].ToString();
-            //nors.Name = row["Descr"].ToString();
-        };
-
-            db.TemplatesNors.Add(nors);
-    
-
-db.SaveChanges();
-}
+	protected override async Task OnInitializedAsync()
+	{
+		// Загружаем данные из базы данных
+		await LoadMethods();
+	}
 
 
+	// заполнение шаблона 135 формы
+	/*
+	public async void LoadDataNor()
+	{
+		DataSet dataSet;
+		DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+		dataSet = await CreditService.GetData135(1000, onDate);
 
 
-
+		if (dataSet == null || dataSet.Tables.Count == 0)
+		{
+			return;
 		}
+		DataTable table = dataSet.Tables[0];
+
+
+		foreach (DataRow row in table.Rows)
+		{
+			var nors = new TemplatesNor();
+			nors.Form = "135";
+			nors.Code = row["C3"].ToString();
+			db.TemplatesNors.Add(nors);
+			db.SaveChanges();
+		};
+	}
+	*/
+
+	// заполнение шаблона 123 формы
+	/*
+	public async void LoadDataNor()
+	{
+		DataSet dataSet;
+		DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+		dataSet = await CreditService.GetData123(1000, onDate);
+
+
+		if (dataSet == null || dataSet.Tables.Count == 0)
+		{
+			return; // или log, throw, что угодно
+		}
+		DataTable table = dataSet.Tables[0];
+
+		
+		foreach (DataRow row in table.Rows)
+		{
+			var nors = new TemplatesNor();
+			nors.Form = "123";
+			nors.Code = row["Code"].ToString();
+			nors.Name = row["Name"].ToString();
+			db.TemplatesNors.Add(nors);
+			db.SaveChanges();
+		};
+	}
+	*/
+
+
+
 
 }
