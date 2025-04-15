@@ -10,68 +10,120 @@
 
 <h3>Шаблоны форм</h3>
 
-<select @bind="SelectedForm">
+<select class="form-select w-25 mb-3" @bind="SelectedForm">
 	@foreach (int form in FormNumber)
 	{
 		<option value="@form">Форма @form</option>
 	}
 </select>
-<button class="btn btn-primary me-2" @onclick="LoadDataNor">Загрузить</button>
+
+<!--<button class="btn btn-primary me-2" @onclick="LoadDataNor">Загрузить</button>-->
 
 
-@if (nors == null)
+@if (nors == null && t101 == null)
 {
-	<p></p>
 }
 else
 {
-	<table class="table">
-		<thead>
-			<tr>
-				<th>ID</th>
-				<th>Название</th>
-			</tr>
-		</thead>
-		<tbody>
-			@foreach (var nor in nors)
-			{
+	// вывод данных форм
+	@if (SelectedForm == 123 || SelectedForm == 135) {
+		if (nors != null){
+		<table class="table">
+			<thead>
 				<tr>
-					<td>@nor.Code</td>
-					<td>@nor.Name</td>
+					<th>Код</th>
+					<th>Описание</th>
 				</tr>
-			}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				@foreach (var item in nors)
+				{
+					<tr>
+						<td>@item.Code</td>
+						<td>@item.Name</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+	}
+	@if (SelectedForm == 101)
+	if(t101!=null){
+	{
+		<table class="table w-25 text-center">
+			<thead>
+				<tr>
+					<th>Глава плана счетов</th>
+					<th>БС</th>
+					<th>Признак счета</th>
+				</tr>
+			</thead>
+			<tbody>
+				@foreach (var item in t101)
+				{
+					<tr>
+						<td>@item.Plan</td>
+						<td>@item.Name</td>
+						<td>@(item.AP == "1" ? "А" : item.AP == "2" ? "П" : "")</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+	}
+
 }
 
 
 @code {
-	private int selectedForm = 135; // ID формы по умолчанию
+	private int selectedForm = 123; // ID формы по умолчанию
 	private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
-	public int SelectedForm { get => selectedForm; set => selectedForm = value; }
+
+	public int SelectedForm
+	{
+		get => selectedForm;
+		set
+		{
+			//if (selectedForm != value)
+			//{
+				selectedForm = value;
+				_ = LoadMethods(); // Асинхронный вызов без ожидания
+			//}
+		}
+	}
+
 	public List<int> FormNumber { get => formNumber; set => formNumber = value; }
+
 	private CreditOrgInfoClient _creditService;
 
 	[Inject]
 	public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
 	private List<TemplatesNor> nors; // шаблон нормативов 123/135
-	private List<Templates101> t101; // шаблон нормативов 123/135
+	private List<Templates101> t101; // шаблон нормативов 101
 
-
+	// загрузка шаблонов форм
 	private async Task LoadMethods()
 	{
-		if (SelectedForm == 123 || SelectedForm == 135)
+		StateHasChanged(); // Принудительно обновляем UI
+		switch (SelectedForm)
 		{
-
-			nors = await db.TemplatesNors.ToListAsync();
+			case 123:
+				nors = await db.TemplatesNors.Where(n => n.Form == "123").ToListAsync();
+				Console.WriteLine("form 123");
+				break;
+			case 135:
+				nors = await db.TemplatesNors.Where(n => n.Form == "135").OrderBy(n => n.Code).ToListAsync();
+				Console.WriteLine("form 135");
+				break;
+			case 101:
+				t101 = await db.Templates101s.ToListAsync();
+				Console.WriteLine("form 101");
+				break;
 		}
-		else
-		{
-			t101 = await db.Templates101s.ToListAsync();
-		}
-		StateHasChanged();
+		StateHasChanged(); // Обновляем UI снова
 	}
+
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -79,89 +131,101 @@ else
 		await LoadMethods();
 	}
 
+	public async void LoadDataNor()
+	{ }
 
-	// заполнение шаблона 101 формы 
+
+
+
+
+
+
+
+
+
+
+	// заполнение шаблона 101 формы
 	/*
 	public async void LoadDataNor()
-	{
+		{
 		DataSet dataSet;
 		DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
 		dataSet = await CreditService.GetData101(1000, onDate);
 
 
 		if (dataSet == null || dataSet.Tables.Count == 0)
-		{
+			{
 			return;
 		}
 		DataTable table = dataSet.Tables[0];
 
 
 		foreach (DataRow row in table.Rows)
-		{
+			{
 			var t101 = new Templates101();
 			t101.Plan = Convert.ToChar(row["pln"]);
 			t101.AP = row["ap"].ToString();
 			t101.Name = row["numsc"].ToString();
 			db.Templates101s.Add(t101);
 			db.SaveChanges();
-		};
+	};
 	}
 	*/
 
 	// заполнение шаблона 135 формы
 	/*
 	public async void LoadDataNor()
-	{
+		{
 		DataSet dataSet;
 		DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
 		dataSet = await CreditService.GetData135(1000, onDate);
 
 
 		if (dataSet == null || dataSet.Tables.Count == 0)
-		{
+			{
 			return;
 		}
 		DataTable table = dataSet.Tables[0];
 
 
 		foreach (DataRow row in table.Rows)
-		{
+			{
 			var nors = new TemplatesNor();
 			nors.Form = "135";
 			nors.Code = row["C3"].ToString();
 			db.TemplatesNors.Add(nors);
 			db.SaveChanges();
-		};
+	};
 	}
 	*/
 
 	// заполнение шаблона 123 формы
 	/*
 	public async void LoadDataNor()
-	{
+		{
 		DataSet dataSet;
 		DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
 		dataSet = await CreditService.GetData123(1000, onDate);
 
 
 		if (dataSet == null || dataSet.Tables.Count == 0)
-		{
+			{
 			return; // или log, throw, что угодно
 		}
 		DataTable table = dataSet.Tables[0];
 
-		
+
 		foreach (DataRow row in table.Rows)
-		{
+			{
 			var nors = new TemplatesNor();
 			nors.Form = "123";
 			nors.Code = row["Code"].ToString();
 			nors.Name = row["Name"].ToString();
 			db.TemplatesNors.Add(nors);
 			db.SaveChanges();
-		};
+	};
 	}
-	*/
+		*/
 
 
 
