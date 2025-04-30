@@ -38,7 +38,7 @@ else
 			<tbody>
 				@foreach (var item in nors)
 				{
-					<tr>
+						<tr @onclick="() => SelectItem(item.IdTnor)">
 						<td>@item.Code</td>
 						<td>@item.Name</td>
 					</tr>
@@ -50,7 +50,7 @@ else
 	@if (SelectedForm == 101)
 	if(t101!=null){
 	{
-		<table class="table w-25 text-center">
+		<table class="table table-hover w-25 text-center">
 			<thead>
 				<tr>
 					<th>Глава плана счетов</th>
@@ -61,7 +61,7 @@ else
 			<tbody>
 				@foreach (var item in t101)
 				{
-					<tr>
+					<tr @onclick="() => SelectItem(item.IdT101)">
 						<td>@item.Plan</td>
 						<td>@item.Name</td>
 						<td>@(item.AP == "1" ? "А" : item.AP == "2" ? "П" : "")</td>
@@ -74,10 +74,23 @@ else
 
 }
 
+<style>
+	.table-hover tbody tr:hover {
+		background-color: darkgrey; /* Цвет фона при наведении */
+	}
+
+	.table-selected {
+		background-color: aqua; /* Зеленый для выбранной строки */
+	}
+
+</style>
+
 
 @code {
 	private int selectedForm = 123; // ID формы по умолчанию
 	private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
+
+	private int? selectedItemId;
 
 	public int SelectedForm
 	{
@@ -131,8 +144,12 @@ else
 		await LoadMethods();
 	}
 
-	public async void LoadDataNor()
-	{ }
+	private void SelectItem(int item)
+	{
+		selectedItemId = item; // Устанавливаем id выбранной методики
+		Console.WriteLine($"Selected item {selectedItemId}");
+	}
+
 
 
 
