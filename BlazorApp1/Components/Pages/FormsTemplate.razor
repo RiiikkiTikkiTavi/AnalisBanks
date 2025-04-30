@@ -1,4 +1,4 @@
-﻿@page "/formsTemplate"
+﻿@* @page "/formsTemplate" *@
 
 @using BlazorApp1.Models
 @using System.Data
@@ -8,9 +8,9 @@
 
 @rendermode InteractiveServer
 
-<h3>Шаблоны форм</h3>
+<!--<h3>Шаблоны форм</h3> -->
 
-<select class="form-select w-25 mb-3" @bind="SelectedForm">
+<select class="form-select w-50 mb-3" @bind="SelectedForm">
 	@foreach (int form in FormNumber)
 	{
 		<option value="@form">Форма @form</option>
@@ -117,7 +117,7 @@ else
 				Console.WriteLine("form 135");
 				break;
 			case 101:
-				t101 = await db.Templates101s.ToListAsync();
+				t101 = await db.Templates101s.OrderBy(n => n.Plan).ThenBy(n => n.Name).ToListAsync();
 				Console.WriteLine("form 101");
 				break;
 		}

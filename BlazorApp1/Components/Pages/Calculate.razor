@@ -7,10 +7,7 @@
 
 
 
-<div>
-	<input type="string" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите выражение" />
-	<!--<button @onclick="@(() => SetInput(Input))">Ввод</button> -->
-</div>
+
 <!--
 <div>
 	<button @onclick="@(() => SetOperation("+"))">+</button>
@@ -32,20 +29,39 @@
 </div>
 
 
-<Modal @ref="modal" Title="Modal title">
+<Modal @ref="modal" Title="Ввод формулы показателя">
     <BodyTemplate>
-        Modal body text goes here.
+        <div>
+            <input type="string" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите выражение" />
+            <!--<button @onclick="@(() => SetInput(Input))">Ввод</button> -->
+        </div>
+
+
     </BodyTemplate>
     <FooterTemplate>
-        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Close</Button>
-        <Button Color="ButtonColor.Primary">Save changes</Button>
+        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Отмена</Button>
+        <Button Color="ButtonColor.Primary">Сохранить</Button>
+    </FooterTemplate>
+</Modal>
+
+
+<!-- В твоей странице -->
+<Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
+    <BodyTemplate>
+        <FormsTemplate />
+    </BodyTemplate>
+    <FooterTemplate>
+        <Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
     </FooterTemplate>
 </Modal>
 
 <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
 
+<Button Color="ButtonColor.Primary" @onclick="OnShowTemp">Show Temp</Button>
+
 @code {
     private Modal modal = default!;
+    private Modal tempModal = default!;
 
     private async Task OnShowModalClick()
     {
@@ -56,4 +72,17 @@
     {
         await modal.HideAsync();
     }
+
+
+    private async Task OnShowTemp()
+    {
+        await tempModal.ShowAsync();
+    }
+
+    private async Task OnHideTemp()
+    {
+        await tempModal.HideAsync();
+    }
+   
+
 }
