@@ -28,7 +28,7 @@ else
 	// вывод данных форм
 	@if (SelectedForm == 123 || SelectedForm == 135) {
 		if (nors != null){
-		<table class="table">
+			<table class="table table-hover">
 			<thead>
 				<tr>
 					<th>Код</th>
@@ -38,7 +38,8 @@ else
 			<tbody>
 				@foreach (var item in nors)
 				{
-						<tr @onclick="() => SelectItem(item.IdTnor)">
+					<tr class="@(item.IdTnor == selectedItemIdNor ? "table-selected" : "")"
+							@onclick="@(() => selectedItemIdNor = item.IdTnor)">
 						<td>@item.Code</td>
 						<td>@item.Name</td>
 					</tr>
@@ -47,9 +48,8 @@ else
 		</table>
 	}
 	}
-	@if (SelectedForm == 101)
+	@if (SelectedForm == 101){
 	if(t101!=null){
-	{
 		<table class="table table-hover w-25 text-center">
 			<thead>
 				<tr>
@@ -61,7 +61,8 @@ else
 			<tbody>
 				@foreach (var item in t101)
 				{
-					<tr @onclick="() => SelectItem(item.IdT101)">
+					<tr class="@(item.IdT101 == selectedItemId101 ? "table-selected" : "")" 
+							@onclick="@(() => selectedItemId101 = item.IdT101)">
 						<td>@item.Plan</td>
 						<td>@item.Name</td>
 						<td>@(item.AP == "1" ? "А" : item.AP == "2" ? "П" : "")</td>
@@ -76,11 +77,12 @@ else
 
 <style>
 	.table-hover tbody tr:hover {
-		background-color: darkgrey; /* Цвет фона при наведении */
+		background-color: cadetblue; /* Цвет фона при наведении */
 	}
 
-	.table-selected {
-		background-color: aqua; /* Зеленый для выбранной строки */
+	.table-selected:active {
+		transform: scale(0.98);
+		background-color: dodgerblue; /* Зеленый для выбранной строки */
 	}
 
 </style>
@@ -90,7 +92,8 @@ else
 	private int selectedForm = 123; // ID формы по умолчанию
 	private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
 
-	private int? selectedItemId;
+	private int? selectedItemIdNor;
+	private int? selectedItemId101;
 
 	public int SelectedForm
 	{
@@ -143,13 +146,18 @@ else
 		// Загружаем данные из базы данных
 		await LoadMethods();
 	}
+	/*
+	private void OnRowClick(int id)
+	{
+		selectedItemIdNor = id;
+	}*/
 
-	private void SelectItem(int item)
+	/*private void SelectItem(int item)
 	{
 		selectedItemId = item; // Устанавливаем id выбранной методики
 		Console.WriteLine($"Selected item {selectedItemId}");
 	}
-
+	*/
 
 
 
