@@ -9,12 +9,15 @@ namespace BlazorApp1.Components.Pages
 
 		private string input = "";
 		private double result = 0;
-		private double display;
+		private string display;
 
 		public string Input { get => input; set => input = value; }
-		public double Display { get => display; set => display = value; }
+		public string Display { get => display; set => display = value; }
 
-			
+		
+		
+
+
 		// метод расчета выражений
 		public void Calc()
 		{
@@ -24,7 +27,7 @@ namespace BlazorApp1.Components.Pages
 			var variables = new Dictionary<string, FloatingPoint> { { ("x"), 1 } };
 
 			// Вычисляем выражение с подстановкой значений
-			Display = Evaluate.Evaluate(variables, expr).RealValue;
+			result = Evaluate.Evaluate(variables, expr).RealValue;
 
 			Console.WriteLine($"Result: {Display}");
 		}
@@ -32,8 +35,8 @@ namespace BlazorApp1.Components.Pages
 		// очистка полей
 		public void Clear()
 		{
-			Input = "";
-			Display = 0;
+			Display = "";
+			result = 0;
 		}
 	}
 }

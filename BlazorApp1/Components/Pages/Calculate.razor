@@ -4,29 +4,32 @@
 
 <h3>Calculate</h3>
 
-
-
-
-
-<!--
-<div>
-	<button @onclick="@(() => SetOperation("+"))">+</button>
-	<button @onclick="@(() => SetOperation("-"))">-</button>
-	<button @onclick="@(() => SetOperation("*"))">*</button>
-	<button @onclick="@(() => SetOperation("/"))">/</button>
-	<button @onclick="@(() => SetOperation("100%"))">100%</button>
-
-</div>
--->
+<button @onclick="@(() => Display+="+")">+</button>
+<button @onclick="@(() => Display+="-")">-</button>
+<button @onclick="@(() => Display+="*")">*</button>
+<button @onclick="@(() => Display+="/")">/</button>
+<button @onclick="@(() => Display+="100%")">100%</button>
+<button @onclick="@(() => Display+="1")">1</button>
+<button @onclick="@(() => Display+="2")">2</button>
+<button @onclick="@(() => Display+="3")">3</button>
+<button @onclick="@(() => Display+="4")">4</button>
+<button @onclick="@(() => Display+="5")">5</button>
+<button @onclick="@(() => Display+="6")">6</button>
+<button @onclick="@(() => Display+="7")">7</button>
+<button @onclick="@(() => Display+="8")">8</button>
+<button @onclick="@(() => Display+="9")">9</button>
+<button @onclick="@(() => Display+="0")">0</button>
+<button @onclick="OnShowTemp">Show Temp</button>
 
 
 <div>
 	<button @onclick="Clear">C</button>
-	<button @onclick="Calc">=</button>
 </div>
 <div>
 	<input type="text" value="@Display" readonly />
 </div>
+
+<button @onclick="Calc">=</button>
 
 
 <Modal @ref="modal" Title="Ввод формулы показателя">
@@ -45,7 +48,7 @@
 </Modal>
 
 
-<!-- В твоей странице -->
+
 <Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
     <BodyTemplate>
         <FormsTemplate />
@@ -57,7 +60,9 @@
 
 <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
 
+<!--
 <Button Color="ButtonColor.Primary" @onclick="OnShowTemp">Show Temp</Button>
+-->
 
 @code {
     private Modal modal = default!;
@@ -82,6 +87,7 @@
     private async Task OnHideTemp()
     {
         await tempModal.HideAsync();
+        if ()
     }
    
 

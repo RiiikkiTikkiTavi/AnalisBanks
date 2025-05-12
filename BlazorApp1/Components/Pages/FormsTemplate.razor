@@ -17,9 +17,6 @@
 	}
 </select>
 
-<!--<button class="btn btn-primary me-2" @onclick="LoadDataNor">Загрузить</button>-->
-
-
 @if (nors == null && t101 == null)
 {
 }
@@ -27,7 +24,7 @@ else
 {
 	// вывод данных форм
 	@if (SelectedForm == 123 || SelectedForm == 135) {
-		if (nors != null){
+		@if (nors != null){
 			<table class="table table-hover">
 			<thead>
 				<tr>
@@ -38,7 +35,7 @@ else
 			<tbody>
 				@foreach (var item in nors)
 				{
-					<tr class="@(item.IdTnor == selectedItemIdNor ? "table-selected" : "")"
+					<tr class="@(item.IdTnor == selectedItemIdNor ? "table-select" : "")"
 							@onclick="@(() => selectedItemIdNor = item.IdTnor)">
 						<td>@item.Code</td>
 						<td>@item.Name</td>
@@ -49,7 +46,7 @@ else
 	}
 	}
 	@if (SelectedForm == 101){
-	if(t101!=null){
+	@if(t101!=null){
 		<table class="table table-hover w-25 text-center">
 			<thead>
 				<tr>
@@ -61,7 +58,7 @@ else
 			<tbody>
 				@foreach (var item in t101)
 				{
-					<tr class="@(item.IdT101 == selectedItemId101 ? "table-selected" : "")" 
+					<tr class="@(item.IdT101 == selectedItemId101 ? "table-select" : "")" 
 							@onclick="@(() => selectedItemId101 = item.IdT101)">
 						<td>@item.Plan</td>
 						<td>@item.Name</td>
@@ -80,9 +77,11 @@ else
 		background-color: cadetblue; /* Цвет фона при наведении */
 	}
 
-	.table-selected:active {
+	.table-select {
 		transform: scale(0.98);
-		background-color: dodgerblue; /* Зеленый для выбранной строки */
+		/* background-color: dodgerblue !important; /* Зеленый для выбранной строки */
+		color: darkslategrey;
+		font-weight: 700;
 	}
 
 </style>
