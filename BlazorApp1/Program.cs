@@ -16,7 +16,7 @@ builder.Services.AddScoped<CreditOrgInfoClient>();
 var connectionString = builder.Configuration.GetConnectionString("PostgresConnection");
 
 // Добавляем поддержку PostgreSQL через Entity Framework Core
-builder.Services.AddDbContext<BanksContext>(options =>
+builder.Services.AddDbContextFactory<BanksContext>(options =>
 	options.UseNpgsql(connectionString));
 
 builder.Services.AddBlazorBootstrap();

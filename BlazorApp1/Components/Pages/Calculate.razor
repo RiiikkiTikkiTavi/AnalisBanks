@@ -1,14 +1,19 @@
 ﻿@page "/calculate"
+@using BlazorApp1.Models
 @using BlazorBootstrap
+
 @rendermode InteractiveServer
 
 <h3>Calculate</h3>
 
+<div>
 <button @onclick="@(() => Display+="+")">+</button>
 <button @onclick="@(() => Display+="-")">-</button>
 <button @onclick="@(() => Display+="*")">*</button>
 <button @onclick="@(() => Display+="/")">/</button>
 <button @onclick="@(() => Display+="100%")">100%</button>
+</div>
+<div>
 <button @onclick="@(() => Display+="1")">1</button>
 <button @onclick="@(() => Display+="2")">2</button>
 <button @onclick="@(() => Display+="3")">3</button>
@@ -19,6 +24,7 @@
 <button @onclick="@(() => Display+="8")">8</button>
 <button @onclick="@(() => Display+="9")">9</button>
 <button @onclick="@(() => Display+="0")">0</button>
+</div>
 <button @onclick="OnShowTemp">Show Temp</button>
 
 
@@ -60,13 +66,33 @@
 
 <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
 
-<!--
-<Button Color="ButtonColor.Primary" @onclick="OnShowTemp">Show Temp</Button>
--->
+@if (isModalVisible)
+{
+    <FormsTemplate OnItemSelected="GetItemSelected" OnClose="OnHideTemp" />
+}
+
+@if (!string.IsNullOrEmpty(selectedItemName))
+{
+    <p>Выбранное имя: @selectedItemName</p>
+}
 
 @code {
+    [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+    
     private Modal modal = default!;
     private Modal tempModal = default!;
+
+    private int? selectedItemIdNor;
+    private string selectedItemName;
+    private bool isModalVisible = false;
+
+    private async Task GetItemSelected(int id)
+    {
+        await using var db = dbFactory.CreateDbContext();
+        var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
+        selectedItemName = item?.Name ?? "Не найдено";
+        OnHideTemp();
+    }
 
     private async Task OnShowModalClick()
     {
@@ -81,13 +107,15 @@
 
     private async Task OnShowTemp()
     {
+        isModalVisible = true;
         await tempModal.ShowAsync();
     }
 
     private async Task OnHideTemp()
     {
+        isModalVisible = false;
         await tempModal.HideAsync();
-        if ()
+       
     }
    
 

@@ -3,7 +3,7 @@
 @using BlazorApp1.Models
 @using System.Data
 @inject NavigationManager NavigationManager
-@inject BanksContext db
+
 
 
 @rendermode InteractiveServer
@@ -36,7 +36,7 @@ else
 				@foreach (var item in nors)
 				{
 					<tr class="@(item.IdTnor == selectedItemIdNor ? "table-select" : "")"
-							@onclick="@(() => selectedItemIdNor = item.IdTnor)">
+							@onclick="@(() => SelectItem(item.IdTnor))">
 						<td>@item.Code</td>
 						<td>@item.Name</td>
 					</tr>
@@ -88,6 +88,11 @@ else
 
 
 @code {
+
+	[Inject] private IDbContextFactory<BanksContext> DbFactory { get; set; }
+	[Parameter] public EventCallback<int> OnItemSelected { get; set; }
+	[Parameter] public EventCallback OnClose { get; set; }
+
 	private int selectedForm = 123; // ID формы по умолчанию
 	private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
 
@@ -109,10 +114,10 @@ else
 
 	public List<int> FormNumber { get => formNumber; set => formNumber = value; }
 
-	private CreditOrgInfoClient _creditService;
+	//private CreditOrgInfoClient _creditService;
 
-	[Inject]
-	public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
+	//[Inject]
+	//public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
 	private List<TemplatesNor> nors; // шаблон нормативов 123/135
 	private List<Templates101> t101; // шаблон нормативов 101
@@ -120,6 +125,7 @@ else
 	// загрузка шаблонов форм
 	private async Task LoadMethods()
 	{
+		await using var db = DbFactory.CreateDbContext();
 		StateHasChanged(); // Принудительно обновляем UI
 		switch (SelectedForm)
 		{
@@ -144,6 +150,18 @@ else
 	{
 		// Загружаем данные из базы данных
 		await LoadMethods();
+	}
+
+
+	private async Task SelectItem(int id)
+	{
+		selectedItemIdNor = id;
+		await OnItemSelected.InvokeAsync(id);
+	}
+
+	private async Task Close()
+	{
+		await OnClose.InvokeAsync();
 	}
 	/*
 	private void OnRowClick(int id)
