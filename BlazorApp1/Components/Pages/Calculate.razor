@@ -57,7 +57,7 @@
 
 <Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
     <BodyTemplate>
-        <FormsTemplate />
+        <FormsTemplate OnItemSelected="GetItemSelected" /><FormsTemplate />
     </BodyTemplate>
     <FooterTemplate>
         <Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
@@ -66,10 +66,6 @@
 
 <Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
 
-@if (isModalVisible)
-{
-    <FormsTemplate OnItemSelected="GetItemSelected" OnClose="OnHideTemp" />
-}
 
 @if (!string.IsNullOrEmpty(selectedItemName))
 {
