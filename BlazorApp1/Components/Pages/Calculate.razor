@@ -7,10 +7,10 @@
 <h3>Calculate</h3>
 
 <div class="mb-2 d-flex flex-wrap gap-1">
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="+")">+</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="-")">-</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="*")">*</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="/")">/</button>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+=" + ")">+</button>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+=" - ")">-</button>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+=" * ")">*</button>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+=" / ")">/</button>
     <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="100%")">100%</button>
 </div>
 
@@ -44,7 +44,7 @@
 </div>
 
 <div>
-    <input type="text" value="@Display" readonly
+    <input type="text" value="@Display" 
            class="form-control form-control-sm bg-white border rounded"
            style="max-width: 300px;" />
 </div>
@@ -89,6 +89,7 @@
 {
     /*если была выбрана строка*/
     <p>Выбранное имя: @selectedItemName *</p>
+    <p>Формула: @Display</p>
 }
 
 @code {
@@ -108,7 +109,7 @@
         // асинхронный поиск первой записи с id
         var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
         // если item найден — взять его код;
-        selectedItemName = item?.Code ?? "Не найдено";
+        selectedItemName = item?.Code.Trim() ?? "Не найдено";
         OnHideTemp();
         if (!string.IsNullOrEmpty(selectedItemName))
         {
@@ -117,6 +118,7 @@
             Console.WriteLine(Display);
         }
     }
+
 
     private async Task OnShowModalClick()
     {
