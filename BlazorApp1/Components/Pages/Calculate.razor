@@ -37,6 +37,7 @@
 
 <button @onclick="Calc">=</button>
 
+<Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
 
 <Modal @ref="modal" Title="Ввод формулы показателя">
     <BodyTemplate>
@@ -54,7 +55,8 @@
 </Modal>
 
 
-
+<!--Модальное окно выбора показателя-->
+<!--В GetItemSelected пердается id выбранной строки из нормативов-->
 <Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
     <BodyTemplate>
         <FormsTemplate OnItemSelected="GetItemSelected" /><FormsTemplate />
@@ -64,30 +66,38 @@
     </FooterTemplate>
 </Modal>
 
-<Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
 
 
 @if (!string.IsNullOrEmpty(selectedItemName))
 {
+    /*если была выбрана строка*/
     <p>Выбранное имя: @selectedItemName</p>
 }
 
 @code {
+    // внедрение фабрики для создания экземпляров BanksContext.
     [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
-    
+
     private Modal modal = default!;
     private Modal tempModal = default!;
 
     private int? selectedItemIdNor;
     private string selectedItemName;
-    private bool isModalVisible = false;
 
     private async Task GetItemSelected(int id)
     {
+        //  создаём новый DbContext, ждём его и автоматически закрываем после использования
         await using var db = dbFactory.CreateDbContext();
+        // асинхронный поиск первой записи с id
         var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
-        selectedItemName = item?.Name ?? "Не найдено";
+        // если item найден — взять его Name;
+        selectedItemName = item?.Code ?? "Не найдено";
         OnHideTemp();
+        if (!string.IsNullOrEmpty(selectedItemName))
+        {
+            /*если была выбрана строка*/
+            Display += selectedItemName;
+        }
     }
 
     private async Task OnShowModalClick()
@@ -103,13 +113,11 @@
 
     private async Task OnShowTemp()
     {
-        isModalVisible = true;
         await tempModal.ShowAsync();
     }
 
     private async Task OnHideTemp()
     {
-        isModalVisible = false;
         await tempModal.HideAsync();
        
     }
