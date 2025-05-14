@@ -41,6 +41,7 @@
 
 <div class="mb-2 d-flex gap-2">
     <button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
+    <button class="btn btn-sm btn-outline-dark" @onclick="Backspace">←</button>
 </div>
 
 <div>
@@ -102,6 +103,14 @@
     private int? selectedItemIdNor;
     private string selectedItemName;
 
+    private void Backspace()
+{
+    if (!string.IsNullOrEmpty(Display))
+    {
+        Display = Display[..^1]; // удаляет последний символ
+    }
+}
+
     private async Task GetItemSelected(int id)
     {
         //  создаём новый DbContext, ждём его и автоматически закрываем после использования
@@ -119,6 +128,10 @@
         }
     }
 
+    private void CheckInput(string com)
+    {
+        
+    }
 
     private async Task OnShowModalClick()
     {

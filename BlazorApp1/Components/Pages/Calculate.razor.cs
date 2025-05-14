@@ -1,4 +1,5 @@
-﻿using MathNet.Symbolics;
+﻿using Google.Protobuf.WellKnownTypes;
+using MathNet.Symbolics;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorApp1.Components.Pages
@@ -12,14 +13,51 @@ namespace BlazorApp1.Components.Pages
 		private string display;
 
 		public string Input { get => input; set => input = value; }
-		public string Display { get => display; set => display = value; }
 
-		
-		
+        public string Display
+        {
+            get => display;
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    display = "";
+                    return;
+                }
+
+                char[] operators = ['+', '-', '*', '/', '%'];
+
+                string newValue = value.Trim();
+
+                // Если первый символ — оператор, не устанавливаем
+                if (string.IsNullOrEmpty(display) && operators.Contains(newValue[0]))
+                    return;
+
+                // Проверка на два оператора подряд
+                if (!string.IsNullOrEmpty(display) &&
+                    operators.Contains(display[^1]) &&
+                    operators.Contains(newValue[^1]))
+                    return;
+
+                // Запрещаем точку сразу после оператора или двойную точку
+                if (newValue[^1] == '.')
+                {
+                    if (display.EndsWith(".") || (display.Length > 0 && operators.Contains(display[^1])))
+                        return;
+                }
+
+                // Если всё ок — присваиваем
+                display += newValue;
+
+            }
+        }
 
 
-		// метод расчета выражений
-		public void Calc()
+
+
+
+        // метод расчета выражений
+        public void Calc()
 		{
 			var expr = Infix.ParseOrThrow(Input);
 
