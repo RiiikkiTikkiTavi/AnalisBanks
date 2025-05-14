@@ -33,6 +33,10 @@ namespace BlazorApp1.Components.Pages
                 if (string.IsNullOrEmpty(display) && operators.Contains(newValue[0]))
                     return;
 
+                // Запрещаем начинать с точки
+                if (string.IsNullOrEmpty(display) && newValue[0] == '.')
+                    return;
+
                 // Проверка на два оператора подряд
                 if (!string.IsNullOrEmpty(display) &&
                     operators.Contains(display[^1]) &&
@@ -42,12 +46,20 @@ namespace BlazorApp1.Components.Pages
                 // Запрещаем точку сразу после оператора или двойную точку
                 if (newValue[^1] == '.')
                 {
-                    if (display.EndsWith(".") || (display.Length > 0 && operators.Contains(display[^1])))
+                    if (display.EndsWith(".") || (!string.IsNullOrEmpty(display) && operators.Contains(display[^1])))
                         return;
                 }
+                /*
+                // Запрещаем оператор сразу после точки
+                if (display.EndsWith(".") && operators.Contains(newValue[0]))
+                    return;
+
+                */
+
+                // Запрещаем точку, если в числе она уже была
 
                 // Если всё ок — присваиваем
-                display += newValue;
+                display = newValue;
 
             }
         }
