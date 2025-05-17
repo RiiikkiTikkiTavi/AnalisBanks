@@ -90,6 +90,7 @@
     /*если была выбрана строка*/
     <p>Выбранное имя: @selectedItemName *</p>
     <p>Формула: @Display</p>
+    <p>Состав: @Consist</p>
 }
 
 @code {
@@ -99,25 +100,50 @@
     private Modal modal = default!;
     private Modal tempModal = default!;
 
-    private int? selectedItemIdNor;
     private string selectedItemName;
 
 
     private void Backspace()
     {
-
+        Console.WriteLine("Backspace");
         if (!string.IsNullOrEmpty(display))
         {
             // Если последний символ — }, проверим на параметр {…}
             if (display.EndsWith("}"))
             {
+                Console.WriteLine("}");
                 int openIndex = display.LastIndexOf('{');
+                // Если найдена корректно (до последнего символа), обрабатываем параметр
                 if (openIndex != -1 && openIndex < display.Length - 1)
                 {
                     // Удаляем весь параметр
                     display = display[..openIndex];
-                    return;
+                    //return;
                 }
+                Console.WriteLine("clean");
+                // Очистка Consist до второй запятой с конца
+                if (!string.IsNullOrEmpty(Consist))
+                {
+                    int lastComma = Consist.LastIndexOf(',');
+                    Console.WriteLine("lastComma" + lastComma);
+                    if (lastComma != -1)
+                    {
+                        int secondLastComma = Consist.LastIndexOf(',', lastComma - 1);
+                        Console.WriteLine("secondLastComma" + secondLastComma);
+                        // Если вторая с конца запятая найдена — обрезаем строку после неё (оставляя её)
+                        if (secondLastComma != -1)
+                        {
+                            Consist = Consist.Substring(0, secondLastComma + 1); // сохраняем вторую запятую
+                            Console.WriteLine("Consist" + Consist);
+                        }
+                        else
+                        {
+                            Consist = ""; // если только одна запятая — всё очищаем
+                        }
+                    }
+                }
+                return;
+
             } 
             Display = Display[..^1]; // удаляет последний символ
         }
@@ -147,21 +173,19 @@
             var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
             // если item найден — взять его код;
             selectedItemName = item?.Code.Trim() ?? "Не найдено";
-        
+
         }
-        
+
         OnHideTemp();
         if (!string.IsNullOrEmpty(selectedItemName))
         {
             /*если была выбрана строка*/
             Display += "{"+selectedItemName+"}";
+            Consist += selectedItem + ",";
             Console.WriteLine(Display);
-        }
-    }
+            Console.WriteLine(Consist);
 
-    private void CheckInput(string com)
-    {
-        
+        }
     }
 
     private async Task OnShowModalClick()

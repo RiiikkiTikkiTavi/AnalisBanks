@@ -11,8 +11,10 @@ namespace BlazorApp1.Components.Pages
 		private string input = "";
 		private double result = 0;
 		private string display;
+        private string consist;
 
-		public string Input { get => input; set => input = value; }
+
+        public string Input { get => input; set => input = value; }
 
         public string Display
         {
@@ -109,6 +111,8 @@ namespace BlazorApp1.Components.Pages
 
             }
         }
+
+        public string Consist { get => consist; set => consist = value; }
 
 
 
