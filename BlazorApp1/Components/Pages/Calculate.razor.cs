@@ -29,6 +29,37 @@ namespace BlazorApp1.Components.Pages
 
                 string newValue = value.Trim();
 
+                if (string.IsNullOrEmpty(display)){
+                    // оператор не может быть первым
+                    if (operators.Contains(newValue[0])) return;
+
+                    // точка не может быть первой
+                    if(newValue[0] == '.') return;
+
+                    // Если всё ок — присваиваем
+                    display = newValue;
+
+                }
+                else
+                {
+                    // не может быть два оператора подряд
+                    if (operators.Contains(display[^1]) && operators.Contains(newValue[^1]))
+                        return;
+
+                    // не может быть оператора после точки
+                    if (display.EndsWith(".") && operators.Contains(newValue[^1]))
+                        return;
+
+                    // точка не может быть после точки и оператора
+                    if ((newValue[^1] == '.') && (display.EndsWith(".") || operators.Contains(display[^1])))
+                        return;
+
+                    // Если всё ок — присваиваем
+                    display = newValue;
+
+                }
+
+/*
                 // Если первый символ — оператор, не устанавливаем
                 if (string.IsNullOrEmpty(display) && operators.Contains(newValue[0]))
                     return;
@@ -53,13 +84,13 @@ namespace BlazorApp1.Components.Pages
                 // Запрещаем оператор сразу после точки
                 if (display.EndsWith(".") && operators.Contains(newValue[0]))
                     return;
-
-                */
+*/
+                
 
                 // Запрещаем точку, если в числе она уже была
 
                 // Если всё ок — присваиваем
-                display = newValue;
+               // display = newValue;
 
             }
         }
