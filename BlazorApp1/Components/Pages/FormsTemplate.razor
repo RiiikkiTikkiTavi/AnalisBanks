@@ -36,7 +36,7 @@ else
 				@foreach (var item in nors)
 				{
 					<tr class="@(item.IdTnor == selectedItemIdNor ? "table-select" : "")"
-							@onclick="@(() => SelectItem(item.IdTnor))">
+							@onclick="@(() => SelectItemNor(item.IdTnor))">
 						<td>@item.Code</td>
 						<td>@item.Name</td>
 					</tr>
@@ -58,8 +58,8 @@ else
 			<tbody>
 				@foreach (var item in t101)
 				{
-					<tr class="@(item.IdT101 == selectedItemId101 ? "table-select" : "")" 
-							@onclick="@(() => selectedItemId101 = item.IdT101)">
+					<tr class="@(item.IdT101 == selectedItemId101 ? "table-select" : "")"
+							@onclick="@(() => SelectItemA(item.IdT101))">
 						<td>@item.Plan</td>
 						<td>@item.Name</td>
 						<td>@(item.AP == "1" ? "А" : item.AP == "2" ? "П" : "")</td>
@@ -79,7 +79,6 @@ else
 
 	.table-select {
 		transform: scale(0.98);
-		/* background-color: dodgerblue !important; /* Зеленый для выбранной строки */
 		color: darkslategrey;
 		font-weight: 700;
 	}
@@ -90,7 +89,7 @@ else
 @code {
 
 	[Inject] private IDbContextFactory<BanksContext> DbFactory { get; set; }
-	[Parameter] public EventCallback<int> OnItemSelected { get; set; }
+	[Parameter] public EventCallback<string> OnItemSelected { get; set; }
 	[Parameter] public EventCallback OnClose { get; set; }
 
 	private int selectedForm = 123; // ID формы по умолчанию
@@ -98,6 +97,7 @@ else
 
 	private int? selectedItemIdNor;
 	private int? selectedItemId101;
+	private string? selectedItem;
 
 	public int SelectedForm
 	{
@@ -106,9 +106,9 @@ else
 		{
 			//if (selectedForm != value)
 			//{
-				selectedForm = value;
-				_ = LoadMethods(); // Асинхронный вызов без ожидания
-			//}
+			selectedForm = value;
+			_ = LoadMethods(); // Асинхронный вызов без ожидания
+										//}
 		}
 	}
 
@@ -152,12 +152,32 @@ else
 		await LoadMethods();
 	}
 
-
-	private async Task SelectItem(int id)
+	private async Task SelectItemNor(int id)
 	{
 		selectedItemIdNor = id;
-		await OnItemSelected.InvokeAsync(id);
+		string selectedItem = "Н" + id;
+
+		// передача параметра в родительскую форму
+		if (selectedItem != null) await OnItemSelected.InvokeAsync(selectedItem);
 	}
+
+	private async Task SelectItemA(int id)
+	{
+		selectedItemId101 = id;
+		string selectedItem = "А" + id;
+
+		// передача параметра в родительскую форму
+		if (selectedItem != null) await OnItemSelected.InvokeAsync(selectedItem);
+	}
+
+	/*
+		* 		string selectedItem = null;
+		if (selectedItemId101!=null) selectedItem = "А"+id;
+		else if (selectedItemIdNor != null) selectedItem = "Н" + id;
+
+		// передача параметра в родительскую форму
+		if (selectedItem != null) await OnItemSelected.InvokeAsync(selectedItem);
+		*/
 
 	private async Task Close()
 	{

@@ -75,10 +75,10 @@
 
 
 <!--Модальное окно выбора показателя-->
-<!--В GetItemSelected пердается id выбранной строки из нормативов-->
+<!--В GetItemSelected пердается id и тип выбранной строки-->
 <Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
     <BodyTemplate>
-        <FormsTemplate OnItemSelected="GetItemSelected" /><FormsTemplate />
+        <FormsTemplate OnItemSelected="@GetItemSelected" />
     </BodyTemplate>
     <FooterTemplate>
         <Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
@@ -104,10 +104,9 @@
     private int? selectedItemIdNor;
     private string selectedItemName;
 
-    public int? n;
 
     private void Backspace()
-{
+    {
 
         if (!string.IsNullOrEmpty(display))
         {
@@ -123,17 +122,36 @@
                 }
             } 
             Display = Display[..^1]; // удаляет последний символ
+        }
     }
-}
 
-    private async Task GetItemSelected(int id)
+    private async Task GetItemSelected(string selectedItem)
     {
+        int id = 0;
+
         //  создаём новый DbContext, ждём его и автоматически закрываем после использования
         await using var db = dbFactory.CreateDbContext();
-        // асинхронный поиск первой записи с id
-        var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
-        // если item найден — взять его код;
-        selectedItemName = item?.Code.Trim() ?? "Не найдено";
+
+        if (selectedItem.StartsWith("А"))
+        {
+            id = int.Parse(selectedItem.Substring(1)); 
+            // асинхронный поиск первой записи с id
+            var item = await db.Templates101s.FirstOrDefaultAsync(n => n.IdT101 == id);
+            // если item найден — взять его код;
+            selectedItemName = item?.Name;
+            selectedItemName += item?.AP == "1" ? "А" : item?.AP == "2" ? "П" : "";
+            selectedItemName = selectedItemName.Trim() ?? "Не найдено";
+        }
+        if (selectedItem.StartsWith("Н"))
+        {
+            id = int.Parse(selectedItem.Substring(1)); 
+            // асинхронный поиск первой записи с id
+            var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
+            // если item найден — взять его код;
+            selectedItemName = item?.Code.Trim() ?? "Не найдено";
+        
+        }
+        
         OnHideTemp();
         if (!string.IsNullOrEmpty(selectedItemName))
         {
