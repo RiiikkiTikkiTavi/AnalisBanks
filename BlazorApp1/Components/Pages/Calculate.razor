@@ -108,9 +108,21 @@
 
     private void Backspace()
 {
-    if (!string.IsNullOrEmpty(Display))
-    {
-        Display = Display[..^1]; // удаляет последний символ
+
+        if (!string.IsNullOrEmpty(display))
+        {
+            // Если последний символ — }, проверим на параметр {…}
+            if (display.EndsWith("}"))
+            {
+                int openIndex = display.LastIndexOf('{');
+                if (openIndex != -1 && openIndex < display.Length - 1)
+                {
+                    // Удаляем весь параметр
+                    display = display[..openIndex];
+                    return;
+                }
+            } 
+            Display = Display[..^1]; // удаляет последний символ
     }
 }
 
