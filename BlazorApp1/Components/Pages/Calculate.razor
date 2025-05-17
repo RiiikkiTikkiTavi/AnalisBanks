@@ -104,6 +104,8 @@
     private int? selectedItemIdNor;
     private string selectedItemName;
 
+    public int? n;
+
     private void Backspace()
 {
     if (!string.IsNullOrEmpty(Display))
@@ -124,7 +126,7 @@
         if (!string.IsNullOrEmpty(selectedItemName))
         {
             /*если была выбрана строка*/
-            Display += selectedItemName;
+            Display += "{"+selectedItemName+"}";
             Console.WriteLine(Display);
         }
     }

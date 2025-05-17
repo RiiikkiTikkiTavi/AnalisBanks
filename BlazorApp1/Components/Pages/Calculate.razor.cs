@@ -29,6 +29,8 @@ namespace BlazorApp1.Components.Pages
 
                 string newValue = value.Trim();
 
+                int n = newValue.Length;
+
                 if (string.IsNullOrEmpty(display)){
                     // оператор не может быть первым
                     if (operators.Contains(newValue[0])) return;
@@ -54,8 +56,21 @@ namespace BlazorApp1.Components.Pages
                     if ((newValue[^1] == '.') && (display.EndsWith(".") || operators.Contains(display[^1])))
                         return;
 
+                    // после параметров может быть только оператор
+                    int lastOpenBrace = display.LastIndexOf('{');
+                    int lastCloseBrace = display.LastIndexOf('}');
+                    if (lastOpenBrace != -1 && lastCloseBrace > lastOpenBrace && lastCloseBrace == display.Length - 1)
+                    {
+                        // Параметр завершён, можно вводить только оператор
+                        if (!operators.Contains(newValue[^1]))
+                            return;
+                    }
+
+
+
                     // Если всё ок — присваиваем
                     display = newValue;
+
 
                 }
 
