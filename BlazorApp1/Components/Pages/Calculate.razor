@@ -18,38 +18,36 @@
     <div class="d-flex gap-1 mb-1">
         @foreach (var n in new[] { "7", "8", "9" })
         {
-            <button class="btn btn-sm btn-outline-dark" style="width: 50px;" @onclick="@(() => Display += n)">@n</button>
+            <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
         }
     </div>
     <div class="d-flex gap-1 mb-1">
         @foreach (var n in new[] { "4", "5", "6" })
         {
-            <button class="btn btn-sm btn-outline-dark" style="width: 50px;" @onclick="@(() => Display += n)">@n</button>
+            <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
         }
     </div>
     <div class="d-flex gap-1 mb-1">
         @foreach (var n in new[] { "1", "2", "3" })
         {
-            <button class="btn btn-sm btn-outline-dark" style="width: 50px;" @onclick="@(() => Display += n)">@n</button>
+            <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
         }
     </div>
-    <div class="d-flex gap-1">
-        <button class="btn btn-sm btn-outline-dark" style="width: 106px;" @onclick="@(() => Display += "0")">0</button>
-        <button class="btn btn-sm btn-outline-dark" style="width: 106px;" @onclick="@(() => Display += ".")">.</button>
-        <button class="btn btn-sm btn-outline-dark" @onclick="OnShowTemp">Tem</button>
+    <div class="d-flex gap-1 mb-1">
+        <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += "0")">0</button>
+        <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += ".")">.</button>
+        <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="OnShowTemp">Tem</button>
     </div>
 </div>
 
-<div class="mb-2 d-flex gap-2">
-    <button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
+<div class="mb-2 d-flex align-items-center gap-2">
+    <input type="text" value="@Display"
+           class="form-control form-control-sm bg-white border rounded"
+           style="max-width: 200px;" />
     <button class="btn btn-sm btn-outline-dark" @onclick="Backspace">←</button>
+    <button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
 </div>
 
-<div>
-    <input type="text" value="@Display" 
-           class="form-control form-control-sm bg-white border rounded"
-           style="max-width: 300px;" />
-</div>
 
 ---
 
