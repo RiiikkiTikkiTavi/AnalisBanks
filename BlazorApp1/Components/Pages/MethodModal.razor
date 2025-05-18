@@ -58,18 +58,6 @@
 				</tbody>
 			</table>
 		}
-	@if (isNewArg)
-	{
-		<div class="mt-3 d-flex gap-3">
-			<input class="form-control w-25" placeholder="Введите название" @bind="Arg.Name" />
-			<input class="form-control w-25" placeholder="Введите краткое название" @bind="Arg.ShortName" />
-			<input class="form-control flex-grow-1" placeholder="Введите описание" @bind="Arg.Descr" />
-		</div>
-		<div class="mt-3">
-			<input class="form-control" placeholder="Введите формулу" @bind="Arg.Expression" />
-		</div>
-			<button class="btn btn-secondary mt-3" @onclick="CreateArg">Создать</button>
-	}
 </div>
 	}
 
@@ -113,10 +101,10 @@
 	private Method NewMethod { get; set; } = new();
 	private Argument Arg { get; set; } = new();
 	private List<Argument> args;
-	private bool isNewArg = false;
 
 	private bool showValidationMessage = false;
 
+	// загрузка данных по существующей методике
 	protected override async Task OnInitializedAsync()
 	{
 		if (IsEditMode)
@@ -141,6 +129,8 @@
 			SaveMethod();
 		}
 	}
+
+	// сохранение методики
 	private async Task SaveMethod()
 	{
 		if (string.IsNullOrWhiteSpace(NewMethod.Name) || string.IsNullOrWhiteSpace(NewMethod.Descr))
@@ -156,6 +146,7 @@
 		Console.WriteLine("Save Method");
 	}
 
+	// обновление методики
 	private async Task UpdadeMethod()
 	{
 		if (string.IsNullOrWhiteSpace(NewMethod.Name) || string.IsNullOrWhiteSpace(NewMethod.Descr))
@@ -170,6 +161,7 @@
 		StateHasChanged();
 		Console.WriteLine("Update Method");
 	}
+
 	// закрыть форму создания методик, переход на список методик
 	private void Close()
 	{
@@ -178,32 +170,12 @@
 	}
 
 	// показать форму создания показателей
-	private void AddArg()
-	{
-		isNewArg = true;
-		Console.WriteLine("Show arguments form");
-	}
-
-	// создать показатель
-	private async Task CreateArg()
-	{
-		Arg.IdMethods = idMeth; // установка номера методики для показателя
-								// Arg.Consist = 
-		db.Arguments.Add(Arg); // запись показателя
-		await db.SaveChangesAsync(); // сохранение
-		args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync(); // обновление списка показателей в методике
-		Arg = new Argument(); // обнуление, создание нового объекта показателей
-
-		StateHasChanged();
-		Console.WriteLine("CreateArg");
-	}
-
-
 	private void AddArg2()
 	{
 		NavigationManager.NavigateTo($"/args/{idMeth}");
 	}
 
+	// контекстное меню на редактирование и удаление показателей
 	private void ShowContextMenu(MouseEventArgs e, Argument argument)
 	{
 		selectedArg = argument;
@@ -212,6 +184,8 @@
 		menuY = $"{e.ClientY}px";
 		StateHasChanged();
 	}
+
+	// перейте на форму редактирования показателя
 	private void EditArg()
 	{
 		if (selectedArg != null)
@@ -220,13 +194,16 @@
 		}
 		showMenu = false;
 	}
+
+	// удалить показатель
 	private async Task DeleteArg()
 	{
 		if (selectedArg != null)
 		{
 			db.Arguments.Remove(selectedArg);
 			await db.SaveChangesAsync();
-			//await LoadMethods();
+			args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync(); // обновление списка показателей в методике
+			StateHasChanged();
 		}
 		showMenu = false;
 	}
