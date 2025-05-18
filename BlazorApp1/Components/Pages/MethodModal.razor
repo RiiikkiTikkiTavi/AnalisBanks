@@ -33,10 +33,10 @@
     {
 	<div>
 	<h5 class="mt-4">Показатели</h5>
-	<button class="btn btn-secondary" @onclick="AddArg">Добавить</button>
+	<button class="btn btn-secondary" @onclick="AddArg2">Добавить</button>
 		@if (args != null && args.Any())
 		{
-			<table class="table">
+			<table class="table" oncontextmenu="return false;">
 				<thead>
 					<tr>
 						<th>Название</th>
@@ -48,7 +48,7 @@
 				<tbody>
 					@foreach (var a in args)
 					{
-						<tr>
+						<tr @oncontextmenu="e => ShowContextMenu(e, a)">
 							<td>@a.Name</td>
 							<td>@a.ShortName</td>
 							<td>@a.Descr</td>
@@ -81,10 +81,33 @@
 	</div>
 }
 
+<!-- Контекстное меню -->
+@if (showMenu)
+{
+	<div class="context-menu" style="top:@menuY; left:@menuX;">
+		<ul class="dropdown-menu show">
+			<li><a class="dropdown-item" @onclick="EditArg">Редактировать</a></li>
+			<li><a class="dropdown-item text-danger" @onclick="DeleteArg">Удалить</a></li>
+		</ul>
+	</div>
+}
+
+<style>
+	.context-menu {
+		position: absolute;
+		z-index: 1000;
+	}
+</style>
 
 @code {
 	[Parameter]
 	public int ?idMeth { get; set; }
+
+	private bool showMenu = false;
+    private string menuX = "0px";
+    private string menuY = "0px";
+	private Argument? selectedArg;
+
 	private bool IsEditMode => idMeth.HasValue;
 
 	private Method NewMethod { get; set; } = new();
@@ -165,7 +188,7 @@
 	private async Task CreateArg()
 	{
 		Arg.IdMethods = idMeth; // установка номера методики для показателя
-		// Arg.Consist = 
+								// Arg.Consist = 
 		db.Arguments.Add(Arg); // запись показателя
 		await db.SaveChangesAsync(); // сохранение
 		args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync(); // обновление списка показателей в методике
@@ -173,6 +196,39 @@
 
 		StateHasChanged();
 		Console.WriteLine("CreateArg");
+	}
+
+
+	private void AddArg2()
+	{
+		NavigationManager.NavigateTo($"/args/{idMeth}");
+	}
+
+	private void ShowContextMenu(MouseEventArgs e, Argument argument)
+	{
+		selectedArg = argument;
+		showMenu = true;
+		menuX = $"{e.ClientX}px";
+		menuY = $"{e.ClientY}px";
+		StateHasChanged();
+	}
+	private void EditArg()
+	{
+		if (selectedArg != null)
+		{
+			NavigationManager.NavigateTo($"/args/{selectedArg.IdMethods}/{selectedArg.IdArg}");
+		}
+		showMenu = false;
+	}
+	private async Task DeleteArg()
+	{
+		if (selectedArg != null)
+		{
+			db.Arguments.Remove(selectedArg);
+			await db.SaveChangesAsync();
+			//await LoadMethods();
+		}
+		showMenu = false;
 	}
 
 }
