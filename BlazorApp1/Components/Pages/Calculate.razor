@@ -6,77 +6,31 @@
 
 <h3>Calculate</h3>
 
-<div class="mb-2 d-flex flex-wrap gap-1">
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="+")">+</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="-")">-</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="*")">*</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="/")">/</button>
-    <button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="100%")">100%</button>
-</div>
+<div class="d-flex align-items-start gap-3 flex-wrap">
+<select @bind="SelectedMethod" class="form-select w-25">
+    <option disabled value="0">Выберите методику</option>
+    @foreach (var meth in methods)
+    {
+        <option value="@meth.IdMethods">@meth.Name</option>
+    }
+</select>
 
-<div class="mb-2">
-    <div class="d-flex gap-1 mb-1">
-        @foreach (var n in new[] { "7", "8", "9" })
-        {
-            <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
-        }
-    </div>
-    <div class="d-flex gap-1 mb-1">
-        @foreach (var n in new[] { "4", "5", "6" })
-        {
-            <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
-        }
-    </div>
-    <div class="d-flex gap-1 mb-1">
-        @foreach (var n in new[] { "1", "2", "3" })
-        {
-            <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
-        }
-    </div>
-    <div class="d-flex gap-1 mb-1">
-        <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += "0")">0</button>
-        <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += ".")">.</button>
-        <button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="OnShowTemp">Tem</button>
-    </div>
-</div>
 
-<div class="mb-2 d-flex align-items-center gap-2">
-    <input type="text" value="@Display"
-           class="form-control form-control-sm bg-white border rounded"
-           style="max-width: 200px;" />
-    <button class="btn btn-sm btn-outline-dark" @onclick="Backspace">←</button>
-    <button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
+    <InputNumber @bind-Value="Regnum" class="form-control w-auto" />
+    <InputDate @bind-Value="OnDate" class="form-control w-auto" />
+
+
+<button class="btn btn-primary" @onclick="Calcs">Рассчитать</button>
 </div>
 
 
----
-
-
-<button @onclick="Calc">=</button>
-
-<Button Color="ButtonColor.Primary" @onclick="OnShowModalClick">Show Modal</Button>
-
-<Modal @ref="modal" Title="Ввод формулы показателя">
-    <BodyTemplate>
-        <div>
-            <input type="string" @bind-value="@Input" @bind-value:event="oninput" placeholder="Введите выражение" />
-            <!--<button @onclick="@(() => SetInput(Input))">Ввод</button> -->
-        </div>
-
-
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button Color="ButtonColor.Secondary" @onclick="OnHideModalClick">Отмена</Button>
-        <Button Color="ButtonColor.Primary">Сохранить</Button>
-    </FooterTemplate>
-</Modal>
 
 
 <!--Модальное окно выбора показателя-->
 <!--В GetItemSelected пердается id и тип выбранной строки-->
 <Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
     <BodyTemplate>
-        <FormsTemplate OnItemSelected="@GetItemSelected" />
+        <FormsTemplate />
     </BodyTemplate>
     <FooterTemplate>
         <Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
@@ -85,109 +39,52 @@
 
 
 
-@if (!string.IsNullOrEmpty(selectedItemName))
-{
-    /*если была выбрана строка*/
-    <p>Выбранное имя: @selectedItemName *</p>
-    <p>Формула: @Display</p>
-    <p>Состав: @Consist</p>
-}
+
 
 @code {
     // внедрение фабрики для создания экземпляров BanksContext.
     [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+    private int regnum = 1000;
+    private string bankName;
+    //private DateTime onDate = DateTime.Today;
+    private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+
+
+
+    private bool isLoading = false;
+    private bool showNulls = false;
+
+    private int selectedMethod = 135; // ID формы по умолчанию
+    private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
+
+    public int Regnum { get => regnum; set => regnum = value; }
+    public string BankName { get => bankName; set => bankName = value; }
+    public DateTime OnDate { get => onDate; set => onDate = value; }
+    public int SelectedMethod { get => selectedMethod; set => selectedMethod = value; }
+    public List<int> FormNumber { get => formNumber; set => formNumber = value; }
+
+    private List<Method> methods = new(); // Список методик
+
+    private async Task LoadMethods()
+    {
+        await using var db = dbFactory.CreateDbContext();
+        methods = await db.Methods.ToListAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем данные из базы данных
+        await LoadMethods();
+    }
+
+    private CreditOrgInfoClient _creditService;
 
     private Modal modal = default!;
     private Modal tempModal = default!;
 
-    private string selectedItemName;
+    private void Calcs(){}
 
-
-    private void Backspace()
-    {
-        Console.WriteLine("Backspace");
-        if (!string.IsNullOrEmpty(display))
-        {
-            // Если последний символ — }, проверим на параметр {…}
-            if (display.EndsWith("}"))
-            {
-                Console.WriteLine("}");
-                int openIndex = display.LastIndexOf('{');
-                // Если найдена корректно (до последнего символа), обрабатываем параметр
-                if (openIndex != -1 && openIndex < display.Length - 1)
-                {
-                    // Удаляем весь параметр
-                    display = display[..openIndex];
-                    //return;
-                }
-                Console.WriteLine("clean");
-                // Очистка Consist до второй запятой с конца
-                if (!string.IsNullOrEmpty(Consist))
-                {
-                    int lastComma = Consist.LastIndexOf(',');
-                    Console.WriteLine("lastComma" + lastComma);
-                    if (lastComma != -1)
-                    {
-                        int secondLastComma = Consist.LastIndexOf(',', lastComma - 1);
-                        Console.WriteLine("secondLastComma" + secondLastComma);
-                        // Если вторая с конца запятая найдена — обрезаем строку после неё (оставляя её)
-                        if (secondLastComma != -1)
-                        {
-                            Consist = Consist.Substring(0, secondLastComma + 1); // сохраняем вторую запятую
-                            Console.WriteLine("Consist" + Consist);
-                        }
-                        else
-                        {
-                            Consist = ""; // если только одна запятая — всё очищаем
-                        }
-                    }
-                }
-                return;
-
-            } 
-            Display = Display[..^1]; // удаляет последний символ
-        }
-    }
-
-    private async Task GetItemSelected(string selectedItem)
-    {
-        int id = 0;
-
-        //  создаём новый DbContext, ждём его и автоматически закрываем после использования
-        await using var db = dbFactory.CreateDbContext();
-
-        if (selectedItem.StartsWith("А"))
-        {
-            id = int.Parse(selectedItem.Substring(1)); 
-            // асинхронный поиск первой записи с id
-            var item = await db.Templates101s.FirstOrDefaultAsync(n => n.IdT101 == id);
-            // если item найден — взять его код;
-            selectedItemName = item?.Name;
-            selectedItemName += item?.AP == "1" ? "А" : item?.AP == "2" ? "П" : "";
-            selectedItemName = selectedItemName.Trim() ?? "Не найдено";
-        }
-        if (selectedItem.StartsWith("Н"))
-        {
-            id = int.Parse(selectedItem.Substring(1)); 
-            // асинхронный поиск первой записи с id
-            var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
-            // если item найден — взять его код;
-            selectedItemName = item?.Code.Trim() ?? "Не найдено";
-
-        }
-
-        OnHideTemp();
-        if (!string.IsNullOrEmpty(selectedItemName))
-        {
-            /*если была выбрана строка*/
-            Display += "{"+selectedItemName+"}";
-            Consist += selectedItem + ",";
-            Console.WriteLine(Display);
-            Console.WriteLine(Consist);
-
-        }
-    }
-
+   
     private async Task OnShowModalClick()
     {
         await modal.ShowAsync();

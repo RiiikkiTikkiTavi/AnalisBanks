@@ -1,5 +1,4 @@
-﻿using Google.Protobuf.WellKnownTypes;
-using MathNet.Symbolics;
+﻿using MathNet.Symbolics;
 using Microsoft.AspNetCore.Components;
 
 namespace BlazorApp1.Components.Pages
@@ -138,5 +137,6 @@ namespace BlazorApp1.Components.Pages
 			Display = "";
 			result = 0;
 		}
+
 	}
 }

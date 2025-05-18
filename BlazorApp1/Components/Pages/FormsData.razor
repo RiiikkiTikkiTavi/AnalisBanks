@@ -8,25 +8,32 @@
 @rendermode InteractiveServer
 
 
-
 <h3>Данные форм</h3>
 
-<select @bind="SelectedForm">
-	@foreach (int form in FormNumber)
-	{
-		<option value="@form">Форма @form</option>
-	}
-</select>
+<div class="d-flex align-items-start gap-3 flex-wrap">
+	<select @bind="SelectedForm" class="form-select w-25">
+		<option disabled value="0">Выберите форму</option>
+		@foreach (var form in FormNumber)
+		{
+			<option value="@form">Форма @form</option>
+		}
+	</select>
 
 
-<InputNumber @bind-Value="Regnum" />
-<InputDate @bind-Value="OnDate" />
+	<InputNumber @bind-Value="Regnum" class="form-control w-auto" />
+	<InputDate @bind-Value="OnDate" class="form-control w-auto" />
 
-<label>
-<InputCheckbox @bind-Value="ShowNulls" />  Показывать пустые значения
-</label>
 
-<button class="btn btn-secondary mt-3" @onclick="LoadData">Загрузить</button>
+	<div class="form-check align-self-end">
+		<InputCheckbox @bind-Value="ShowNulls" class="form-check-input" id="nullsCheck" />
+		<label class="form-check-label ms-1" for="nullsCheck">
+			Показывать пустые значения
+		</label>
+	</div>
+
+	<button class="btn btn-primary" @onclick="LoadData">Загрузить</button>
+</div>
+
 
 <p>@BankName</p>
 
