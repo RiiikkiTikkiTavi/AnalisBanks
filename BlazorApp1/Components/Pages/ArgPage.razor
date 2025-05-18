@@ -3,7 +3,6 @@
 
 @using BlazorApp1.Models
 @inject NavigationManager NavigationManager
-@inject BanksContext db
 
 
 @rendermode InteractiveServer
@@ -26,8 +25,54 @@
 </div>
 <div class="mt-3">
 	<label class="form-label">Формула показателя:</label>
-	<input class="form-control" placeholder="Введите формулу" @bind="Arg.Expression" />
+	<!--	<input class="form-control" placeholder="Введите формулу" @bind="Arg.Expression" /> -->
+
+
+<div class="mb-2 d-flex align-items-center gap-2">
+	<input type="text" value="@Display"
+		   class="form-control"
+		   placeholder="Введите формулу" />
+	<button class="btn btn-sm btn-outline-dark" @onclick="Backspace">←</button>
+	<button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
 </div>
+</div>
+
+<div class="mb-2 d-flex flex-wrap gap-1">
+	<button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="+")">+</button>
+	<button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="-")">-</button>
+	<button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="*")">*</button>
+	<button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="/")">/</button>
+	<button class="btn btn-sm btn-outline-secondary" @onclick="@(() => Display+="100%")">100%</button>
+</div>
+
+<div class="mb-2">
+	<div class="d-flex gap-1 mb-1">
+		@foreach (var n in new[] { "7", "8", "9" })
+		{
+			<button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
+		}
+	</div>
+	<div class="d-flex gap-1 mb-1">
+		@foreach (var n in new[] { "4", "5", "6" })
+		{
+			<button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
+		}
+	</div>
+	<div class="d-flex gap-1 mb-1">
+		@foreach (var n in new[] { "1", "2", "3" })
+		{
+			<button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += n)">@n</button>
+		}
+	</div>
+	<div class="d-flex gap-1 mb-1">
+		<button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += "0")">0</button>
+		<button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="@(() => Display += ".")">.</button>
+		<button class="btn btn-sm btn-outline-dark" style="width: 60px;" @onclick="OnShowTemp">Tem</button>
+	</div>
+</div>
+
+
+
 
 <button class="btn btn-primary mt-3" @onclick="OnSaveClick">
 	@(IsEditMode ? "Сохранить" : "Создать")
@@ -45,12 +90,98 @@
 }
 
 
+<!--Модальное окно выбора показателя-->
+<!--В GetItemSelected пердается id и тип выбранной строки-->
+<Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
+	<BodyTemplate>
+		<FormsTemplate OnItemSelected="@GetItemSelected" />
+	</BodyTemplate>
+	<FooterTemplate>
+		<Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
+	</FooterTemplate>
+</Modal>
+
 @code {
-	[Parameter]
-	public int? idMeth { get; set; }
-	[Parameter]
-	public int? idArg { get; set; }
+		[Parameter]
+		public int? idMeth { get; set; }
+		[Parameter]
+		public int? idArg { get; set; }
 	private bool IsEditMode => idArg.HasValue; // режим редактирования, показатель уже существует
+
+
+	[Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+
+	private Modal tempModal = default!;
+
+	private string selectedItemName;
+
+	private string display;
+
+	public string Display
+	{
+		get => display;
+		set
+		{
+			if (string.IsNullOrEmpty(value))
+			{
+				display = "";
+				return;
+			}
+
+			char[] operators = ['+', '-', '*', '/', '%'];
+
+			string newValue = value.Trim();
+
+			int n = newValue.Length;
+
+			if (string.IsNullOrEmpty(display))
+			{
+				// оператор не может быть первым
+				if (operators.Contains(newValue[0])) return;
+
+				// точка не может быть первой
+				if (newValue[0] == '.') return;
+
+				// Если всё ок — присваиваем
+				display = newValue;
+
+			}
+			else
+			{
+				// не может быть два оператора подряд
+				if (operators.Contains(display[^1]) && operators.Contains(newValue[^1]))
+					return;
+
+				// не может быть оператора после точки
+				if (display.EndsWith(".") && operators.Contains(newValue[^1]))
+					return;
+
+				// точка не может быть после точки и оператора
+				if ((newValue[^1] == '.') && (display.EndsWith(".") || operators.Contains(display[^1])))
+					return;
+
+				// после параметров может быть только оператор
+				int lastOpenBrace = display.LastIndexOf('{');
+				int lastCloseBrace = display.LastIndexOf('}');
+				if (lastOpenBrace != -1 && lastCloseBrace > lastOpenBrace && lastCloseBrace == display.Length - 1)
+				{
+					// Параметр завершён, можно вводить только оператор
+					if (!operators.Contains(newValue[^1]))
+						return;
+				}
+
+
+
+				// Если всё ок — присваиваем
+				display = newValue;
+
+
+			}
+		}
+	}
+
+	private string consist;
+	public string Consist { get => consist; set => consist = value; }
 
 	private Argument Arg { get; set; } = new();
 
@@ -60,6 +191,7 @@
 	{
 		if (IsEditMode)
 		{
+			await using var db = dbFactory.CreateDbContext();
 			// загрузка данных по существующему показателю
 			Arg = await db.Arguments.FirstOrDefaultAsync(a => a.IdArg == idArg.Value);			
 		}
@@ -87,6 +219,7 @@
 		}
 		showValidationMessage = false;
 		Arg.IdMethods = idMeth;
+		await using var db = dbFactory.CreateDbContext();
 		db.Arguments.Add(Arg);  // обновление
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
 		idArg = Arg.IdArg; // создание id методики
@@ -104,6 +237,7 @@
 			return;
 		}
 		showValidationMessage = false; // убрать сообщение
+		await using var db = dbFactory.CreateDbContext();
 		db.Arguments.Update(Arg);  // запись
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
 		Console.WriteLine("Update Method");
@@ -117,4 +251,108 @@
 		Console.WriteLine("Close Method");
 	}
 
+
+
+	// очистка полей
+	public void Clear()
+	{
+		Display = "";
+		Consist = "";
+	}
+
+	private void Backspace()
+	{
+		Console.WriteLine("Backspace");
+		if (!string.IsNullOrEmpty(display))
+		{
+			// Если последний символ — }, проверим на параметр {…}
+			if (display.EndsWith("}"))
+			{
+				Console.WriteLine("}");
+				int openIndex = display.LastIndexOf('{');
+				// Если найдена корректно (до последнего символа), обрабатываем параметр
+				if (openIndex != -1 && openIndex < display.Length - 1)
+				{
+					// Удаляем весь параметр
+					display = display[..openIndex];
+					//return;
+				}
+				Console.WriteLine("clean");
+				// Очистка Consist до второй запятой с конца
+				if (!string.IsNullOrEmpty(Consist))
+				{
+					int lastComma = Consist.LastIndexOf(',');
+					Console.WriteLine("lastComma" + lastComma);
+					if (lastComma != -1)
+					{
+						int secondLastComma = Consist.LastIndexOf(',', lastComma - 1);
+						Console.WriteLine("secondLastComma" + secondLastComma);
+						// Если вторая с конца запятая найдена — обрезаем строку после неё (оставляя её)
+						if (secondLastComma != -1)
+						{
+							Consist = Consist.Substring(0, secondLastComma + 1); // сохраняем вторую запятую
+							Console.WriteLine("Consist" + Consist);
+						}
+						else
+						{
+							Consist = ""; // если только одна запятая — всё очищаем
+						}
+					}
+				}
+				return;
+
+			}
+			Display = Display[..^1]; // удаляет последний символ
+		}
+	}
+
+	private async Task GetItemSelected(string selectedItem)
+	{
+		int id = 0;
+
+		//  создаём новый DbContext, ждём его и автоматически закрываем после использования
+		await using var db = dbFactory.CreateDbContext();
+
+		if (selectedItem.StartsWith("А"))
+		{
+			id = int.Parse(selectedItem.Substring(1));
+			// асинхронный поиск первой записи с id
+			var item = await db.Templates101s.FirstOrDefaultAsync(n => n.IdT101 == id);
+			// если item найден — взять его код;
+			selectedItemName = item?.Name;
+			selectedItemName += item?.AP == "1" ? "А" : item?.AP == "2" ? "П" : "";
+			selectedItemName = selectedItemName.Trim() ?? "Не найдено";
+		}
+		if (selectedItem.StartsWith("Н"))
+		{
+			id = int.Parse(selectedItem.Substring(1));
+			// асинхронный поиск первой записи с id
+			var item = await db.TemplatesNors.FirstOrDefaultAsync(n => n.IdTnor == id);
+			// если item найден — взять его код;
+			selectedItemName = item?.Code.Trim() ?? "Не найдено";
+
+		}
+
+		OnHideTemp();
+		if (!string.IsNullOrEmpty(selectedItemName))
+		{
+			/*если была выбрана строка*/
+			Display += "{" + selectedItemName + "}";
+			Consist += selectedItem + ",";
+			Console.WriteLine(Display);
+			Console.WriteLine(Consist);
+
+		}
+	}
+
+	private async Task OnShowTemp()
+	{
+		await tempModal.ShowAsync();
+	}
+
+	private async Task OnHideTemp()
+	{
+		await tempModal.HideAsync();
+
+	}
 }
