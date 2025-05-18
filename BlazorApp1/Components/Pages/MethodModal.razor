@@ -2,7 +2,6 @@
 @page "/newMethod"
 
 @using BlazorApp1.Models
-@inject BanksContext db
 @inject NavigationManager NavigationManager
 
 
@@ -18,7 +17,11 @@
 </div>
 <div class="mb-3">
 	<label class="form-label">Описание:</label>
-	<textarea class="form-control w-50" @bind="NewMethod.Descr"></textarea>
+		<textarea class="form-control w-50"
+				  rows="4"
+				  placeholder="Введите описание"
+				  @bind="NewMethod.Descr">
+	</textarea>
 </div>
 <div class="d-flex">
 		<button class="btn btn-primary me-2" @onclick="OnSaveClick">
@@ -91,6 +94,8 @@
 	[Parameter]
 	public int ?idMeth { get; set; }
 
+	[Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+
 	private bool showMenu = false;
     private string menuX = "0px";
     private string menuY = "0px";
@@ -109,11 +114,13 @@
 	{
 		if (IsEditMode)
 		{
+			await using var db = dbFactory.CreateDbContext();
 			var method = await db.Methods.FindAsync(idMeth.Value);
 			if (method != null)
 			{
 				NewMethod = method;
 				args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
+				StateHasChanged();
 			}
 		}
 	}
@@ -139,6 +146,7 @@
 			return;
 		}
 		showValidationMessage = false;
+		await using var db = dbFactory.CreateDbContext();
 		db.Methods.Add(NewMethod);	// обновление
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
 		idMeth = NewMethod.IdMethods; // создание id методики
@@ -154,6 +162,7 @@
 			showValidationMessage = true; // сообщение заполнить данные
 			return;
 		}
+		await using var db = dbFactory.CreateDbContext();
 		showValidationMessage = false; // убрать сообщение
 		db.Methods.Update(NewMethod);  // запись
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
@@ -200,6 +209,7 @@
 	{
 		if (selectedArg != null)
 		{
+			await using var db = dbFactory.CreateDbContext();
 			db.Arguments.Remove(selectedArg);
 			await db.SaveChangesAsync();
 			args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync(); // обновление списка показателей в методике

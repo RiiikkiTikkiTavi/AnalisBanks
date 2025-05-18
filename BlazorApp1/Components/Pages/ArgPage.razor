@@ -21,20 +21,21 @@
 </div>
 <div class="mb-3">
 	<label class="form-label">Описание показателя:</label>
-	<input class="form-control flex-grow-1" placeholder="Введите описание" @bind="Arg.Descr" />
+	<textarea class="form-control w-50"
+			  rows="4"
+			  placeholder="Введите описание"
+			  @bind="Arg.Descr">
+	</textarea>
 </div>
 <div class="mt-3">
 	<label class="form-label">Формула показателя:</label>
-	<!--	<input class="form-control" placeholder="Введите формулу" @bind="Arg.Expression" /> -->
-
-
-<div class="mb-2 d-flex align-items-center gap-2">
-	<input type="text" value="@Display"
-		   class="form-control"
-		   placeholder="Введите формулу" />
-	<button class="btn btn-sm btn-outline-dark" @onclick="Backspace">←</button>
-	<button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
-</div>
+	<div class="mb-2 d-flex align-items-center gap-2">
+		<input type="text" value="@Display"
+			   class="form-control w-50"
+			   placeholder="Введите формулу" />
+		<button class="btn btn-sm btn-outline-dark" @onclick="Backspace">←</button>
+		<button class="btn btn-sm btn-outline-dark" @onclick="Clear">C</button>
+	</div>
 </div>
 
 <div class="mb-2 d-flex flex-wrap gap-1">
@@ -78,8 +79,8 @@
 	@(IsEditMode ? "Сохранить" : "Создать")
 </button>
 
-	<button class="btn btn-secondary mt-3" @onclick="Close">Отмена</button>
-		
+<button class="btn btn-secondary mt-3" @onclick="Close">Отмена</button>
+
 
 @if (showValidationMessage)
 {
@@ -102,10 +103,10 @@
 </Modal>
 
 @code {
-		[Parameter]
-		public int? idMeth { get; set; }
-		[Parameter]
-		public int? idArg { get; set; }
+	[Parameter]
+	public int? idMeth { get; set; }
+	[Parameter]
+	public int? idArg { get; set; }
 	private bool IsEditMode => idArg.HasValue; // режим редактирования, показатель уже существует
 
 
@@ -193,7 +194,8 @@
 		{
 			await using var db = dbFactory.CreateDbContext();
 			// загрузка данных по существующему показателю
-			Arg = await db.Arguments.FirstOrDefaultAsync(a => a.IdArg == idArg.Value);			
+			Arg = await db.Arguments.FirstOrDefaultAsync(a => a.IdArg == idArg.Value);
+			Display = Arg.Expression;
 		}
 	}
 
@@ -212,18 +214,19 @@
 	// сохранение показателя
 	private async Task SaveArg()
 	{
-		if (string.IsNullOrWhiteSpace(Arg.Name) || string.IsNullOrWhiteSpace(Arg.ShortName) || string.IsNullOrWhiteSpace(Arg.Expression))
+		if (string.IsNullOrWhiteSpace(Arg.Name) || string.IsNullOrWhiteSpace(Arg.ShortName) || string.IsNullOrWhiteSpace(Display))
 		{
 			showValidationMessage = true;
 			return;
 		}
 		showValidationMessage = false;
 		Arg.IdMethods = idMeth;
+		Arg.Expression = Display;
+		Arg.Consist = Consist;
 		await using var db = dbFactory.CreateDbContext();
-		db.Arguments.Add(Arg);  // обновление
+		db.Arguments.Add(Arg);  // добавление
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-		idArg = Arg.IdArg; // создание id методики
-		//StateHasChanged();
+		idArg = Arg.IdArg; // создание id показателя
 		Console.WriteLine("Save argument");
 		NavigationManager.NavigateTo($"/newMethod/{idMeth}");
 	}
@@ -237,8 +240,10 @@
 			return;
 		}
 		showValidationMessage = false; // убрать сообщение
+		Arg.Expression = Display;
+		Arg.Consist = Consist;
 		await using var db = dbFactory.CreateDbContext();
-		db.Arguments.Update(Arg);  // запись
+		db.Arguments.Update(Arg);  // обновление
 		await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
 		Console.WriteLine("Update Method");
 		NavigationManager.NavigateTo($"/newMethod/{idMeth}");
@@ -251,8 +256,6 @@
 		Console.WriteLine("Close Method");
 	}
 
-
-
 	// очистка полей
 	public void Clear()
 	{
@@ -260,6 +263,7 @@
 		Consist = "";
 	}
 
+	// стереть последний введенный символ
 	private void Backspace()
 	{
 		Console.WriteLine("Backspace");
@@ -306,6 +310,7 @@
 		}
 	}
 
+	// ввод наименований показателей
 	private async Task GetItemSelected(string selectedItem)
 	{
 		int id = 0;
@@ -333,7 +338,8 @@
 
 		}
 
-		OnHideTemp();
+		OnHideTemp(); // убрать форму
+
 		if (!string.IsNullOrEmpty(selectedItemName))
 		{
 			/*если была выбрана строка*/
@@ -345,11 +351,13 @@
 		}
 	}
 
+	// показать окно выбора показателей из отчетных форм
 	private async Task OnShowTemp()
 	{
 		await tempModal.ShowAsync();
 	}
 
+	// скрыть окно выбора показателей из отчетных форм
 	private async Task OnHideTemp()
 	{
 		await tempModal.HideAsync();
