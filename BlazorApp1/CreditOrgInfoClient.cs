@@ -3,6 +3,8 @@
 using BlazorApp1.Models;
 using global::CregitInfoWS;
 using Google.Protobuf.WellKnownTypes;
+using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Data;
 using System.ServiceModel;
@@ -19,7 +21,9 @@ namespace BlazorApp1
 	{
 		private readonly CreditOrgInfoSoap _client;
 
-		public CreditOrgInfoClient()
+        [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+
+        public CreditOrgInfoClient()
 		{
 			var binding = new BasicHttpBinding();
 			var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
@@ -186,9 +190,119 @@ namespace BlazorApp1
 			return dataSet;
         }
 
+		public async Task LoadData101(int regnum, DateTime dt)
+		{
+            await using var db = dbFactory.CreateDbContext();
+			// загрузить 101 форму в dataset
+            var dataSet = await GetData101(regnum, dt);
+			// объявление списка записей для сохранения в базу
+            var data101Records = new List<Data101>();
+            // если данные есть
+            if (dataSet == null) return;
+
+            // получить словарь соответсвий (ap, numsc) - id_t101 шаблона 101 формы
+            var id_t101s = await FindTemplateId101(dataSet);
+				// получить id расчета
+				int id_info = await CreateLoad(regnum, dt);
+
+            foreach (DataTable table in dataSet.Tables)
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    string? ap = row["ap"]?.ToString();
+                    string? numsc = row["numsc"]?.ToString();
+
+                    if (string.IsNullOrWhiteSpace(ap) || string.IsNullOrWhiteSpace(numsc))
+                        continue;
+
+                    // попытка найти значение по ключу в словаре id_t101s
+                    if (!id_t101s.TryGetValue((ap, numsc), out int id_t101))
+                        continue; // если шаблон не найден — пропускаем
+
+                    // Парсим значения
+                    decimal.TryParse(row["vitg"]?.ToString(), out var vint);
+                    decimal.TryParse(row["iitg"]?.ToString(), out var iitg);
+
+                    // список объектов типа Data101, которые хотим добавить в базу
+                    // добавляем новый объект в список, чтобы потом все записи массово сохранить в базу.
+                    data101Records.Add(new Data101
+                    {
+                        IdInfo = id_info,
+                        IdT101 = id_t101,
+                        Vint = vint,
+                        Iitg = iitg
+                    });
+                }
+            }
+
+            db.Data101s.AddRange(data101Records);
+            await db.SaveChangesAsync();
+        }
 
 
-    }
+        // получить id шаблона 101 формы по счету и его типу (А/П)
+        // возвращает словарь соответсвий (ap, numsc) - id_t101
+        public async Task<Dictionary<(string ap, string numsc), int>> FindTemplateId101(DataSet dataSet)
+        {
+            // Сбор уникальных пар (ap, numsc) из DataSet
+			var keys = new HashSet<(string ap, string numsc)>();
+
+            await using var db = dbFactory.CreateDbContext();
+
+            foreach (DataTable table in dataSet.Tables)
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    string? ap = row["ap"]?.ToString();
+                    string? numsc = row["numsc"]?.ToString();
+
+					if (!string.IsNullOrWhiteSpace(ap) && !string.IsNullOrWhiteSpace(numsc))
+					{
+						keys.Add((ap, numsc));
+					}
+                }
+            }
+
+            // Загружаем всё из templates_101 в память (можно сузить по колонке plan, если есть)
+            var allTemplates = await db.Templates101s.ToListAsync();
+
+            // Фильтруем в памяти
+            var matched = allTemplates
+                .Where(t => keys.Contains((t.AP, t.Name)))
+                .ToDictionary(t => (t.AP, t.Name), t => t.IdT101);
+
+            return matched;
+        }
+
+
+        // создание загрузки данных форм, заполнение банка и даты
+        public async Task<int> CreateLoad(int regnum, DateTime dt)
+		{
+            await using var db = dbFactory.CreateDbContext();
+            var dateOnly = DateOnly.FromDateTime(dt);
+
+            // Поиск существующей записи
+            var existing = await db.FormInfos
+                .FirstOrDefaultAsync(x => x.Regnum == regnum && x.Dt == dateOnly);
+
+            if (existing != null)
+                return existing.IdInfo;
+
+            // Создание новой записи
+            var record = new FormInfo
+			{
+				Regnum = regnum,
+				Dt = DateOnly.FromDateTime(dt)
+			}; 
+
+            db.FormInfos.Add(record);
+            await db.SaveChangesAsync();
+
+			// возврат id созданной записи
+			return record.IdInfo;
+        }
+
+      }
 }
 
 
