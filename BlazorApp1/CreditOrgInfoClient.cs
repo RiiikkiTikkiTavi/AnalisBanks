@@ -21,17 +21,26 @@ namespace BlazorApp1
 	{
 		private readonly CreditOrgInfoSoap _client;
 
-        [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+		/*		[Inject]
+				private IDbContextFactory<BanksContext> dbFactory { get; set; } = default!;
 
-        public CreditOrgInfoClient()
+				public CreditOrgInfoClient()
+				{
+					var binding = new BasicHttpBinding();
+					var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
+
+					var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
+					_client = factory.CreateChannel();
+				}
+
+				*/
+		
+		private readonly IDbContextFactory<BanksContext> dbFactory;
+		public CreditOrgInfoClient(CreditOrgInfoSoap client, IDbContextFactory<BanksContext> dbFactory)
 		{
-			var binding = new BasicHttpBinding();
-			var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
-
-			var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
-			_client = factory.CreateChannel();
+			_client = client;
+			this.dbFactory = dbFactory;
 		}
-
 
 		//вспомогательный метод - вывод dataset в консоль
 		private void ShowDataSet(DataSet dataSet)
@@ -171,6 +180,12 @@ namespace BlazorApp1
 				dataSet.ReadXml(xmlReader); // Читаем XML
 			}
 
+			// Удаляем таблицу F1011, если она есть
+			if (dataSet.Tables.Contains("F1011"))
+			{
+				dataSet.Tables.Remove("F1011");
+			}
+
 			// убираем пустую инфу, делаем корректный вывод
 			foreach (DataTable table in dataSet.Tables)
 			{
@@ -192,9 +207,14 @@ namespace BlazorApp1
 
 		public async Task LoadData101(int regnum, DateTime dt)
 		{
-            await using var db = dbFactory.CreateDbContext();
+			await using var db = dbFactory?.CreateDbContext(); // <--- здесь проверь dbFactory
+			if (db == null)
+			{
+				Console.WriteLine("Ошибка: dbFactory == null");
+				return;
+			}
 			// загрузить 101 форму в dataset
-            var dataSet = await GetData101(regnum, dt);
+			var dataSet = await GetData101(regnum, dt);
 			// объявление списка записей для сохранения в базу
             var data101Records = new List<Data101>();
             // если данные есть
@@ -263,7 +283,7 @@ namespace BlazorApp1
                 }
             }
 
-            // Загружаем всё из templates_101 в память (можно сузить по колонке plan, если есть)
+            // Загружаем всё из templates_101 в память
             var allTemplates = await db.Templates101s.ToListAsync();
 
             // Фильтруем в памяти

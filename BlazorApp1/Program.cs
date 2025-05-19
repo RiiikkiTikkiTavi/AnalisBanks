@@ -1,8 +1,10 @@
 using BlazorApp1;
 using BlazorApp1.Components;
 using BlazorApp1.Models;
+using CregitInfoWS;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using System.ServiceModel;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +22,18 @@ builder.Services.AddDbContextFactory<BanksContext>(options =>
 	options.UseNpgsql(connectionString));
 
 builder.Services.AddBlazorBootstrap();
+
+// Регистрируем CreditOrgInfoSoap вручную:
+builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
+{
+	var binding = new BasicHttpBinding();
+	var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
+	var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
+	return factory.CreateChannel();
+});
+
+// И регистрируем сам клиент
+builder.Services.AddScoped<CreditOrgInfoClient>();
 
 var app = builder.Build();
 
