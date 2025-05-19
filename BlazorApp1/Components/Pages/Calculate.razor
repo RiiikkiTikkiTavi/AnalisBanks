@@ -32,11 +32,11 @@
         }
     </ul>
 }
-else
+<!--else
 {
     <div class="text-muted mt-3">Нет показателей для выбранной методики.</div>
-    <!--не работает-->
-}
+    не работает
+}-->
 
 
 <!--Модальное окно выбора показателя-->
@@ -100,16 +100,15 @@ else
     private async Task LoadArguments(int idMeth)
     {
         await using var db = dbFactory.CreateDbContext();
-        args = await db.Arguments
-            .Where(a => a.IdMethods == idMeth)
-            .ToListAsync();
+        args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
     }
     private async Task OnMethodChanged(ChangeEventArgs e)
     {
-        await using var db = dbFactory.CreateDbContext();
-        args = await db.Arguments.Where(a => a.IdMethods == selectedMethod).ToListAsync();
-    StateHasChanged();
-   
+        /*await using var db = dbFactory.CreateDbContext();
+        args = await db.Arguments.Where(a => a.IdMethods == selectedMethod).ToListAsync();*/
+        await LoadArguments(selectedMethod);
+        StateHasChanged();
+
     }
 
     private CreditOrgInfoClient _creditService;
@@ -117,7 +116,12 @@ else
     private Modal modal = default!;
     private Modal tempModal = default!;
 
-    private void Calcs(){}
+    private void Calcs()
+    {
+        //await using var db = dbFactory.CreateDbContext();
+        
+    
+    }
 
    
     private async Task OnShowModalClick()

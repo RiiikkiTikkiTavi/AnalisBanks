@@ -114,11 +114,14 @@ namespace BlazorApp1.Components.Pages
         public string Consist { get => consist; set => consist = value; }
 
 
+        public void Calc(string expr, string con)
+        {
 
+        }
 
 
         // метод расчета выражений
-        public void Calc()
+        public void Calc2()
 		{
 			var expr = Infix.ParseOrThrow(Input);
 
