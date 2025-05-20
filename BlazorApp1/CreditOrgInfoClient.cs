@@ -13,6 +13,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+//using static Google.Protobuf.Collections.MapField<TKey, TValue>;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -155,6 +156,55 @@ namespace BlazorApp1
 
 			return dataSet;
 		}
+		// загрузка данных по 135 форме в базу данных
+		public async Task LoadData135(int regnum, DateTime dt)
+		{
+			await using var db = dbFactory?.CreateDbContext(); 
+			if (db == null)
+			{
+				Console.WriteLine("Ошибка: dbFactory == null");
+				return;
+			}
+			// загрузить 135 форму в dataset
+			var dataSet = await GetData135(regnum, dt);
+			// объявление списка записей для сохранения в базу
+			var data135Records = new List<DataNor>();
+			// если данные есть
+			if (dataSet == null) return;
+
+			// получить словарь соответсвий (ap, numsc) - id_t101 шаблона 101 формы
+			//var id_t101s = await FindTemplateId101(dataSet);
+			// получить id расчета
+			int id_info = await CreateLoad(regnum, dt);
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				foreach (DataRow row in table.Rows)
+				{
+					var id_tnor = await db.TemplatesNors
+										 .Where(t => t.Code == row["C3"])
+										 .Select(t => (int?)t.IdTnor)
+										 .FirstOrDefaultAsync();
+
+					// Пробуем распарсить значение
+					if (!decimal.TryParse(row["V3"]?.ToString(), out var val))
+						continue; // Пропустить, если значение V3 отсутствует или не число
+
+
+					// список объектов типа Data101, которые хотим добавить в базу
+					// добавляем новый объект в список, чтобы потом все записи массово сохранить в базу.
+					data135Records.Add(new DataNor
+					{
+						IdInfo = id_info,
+						IdTnor = id_tnor,
+						Val = val
+					});
+				}
+			}
+
+			db.DataNors.AddRange(data135Records);
+			await db.SaveChangesAsync();
+		}
 
 
 		// получение данных по форме 101 по рег. номеру банка и дате
@@ -206,9 +256,10 @@ namespace BlazorApp1
 			return dataSet;
         }
 
+		// загрузка данных по 101 форме в базу данных
 		public async Task LoadData101(int regnum, DateTime dt)
 		{
-			await using var db = dbFactory?.CreateDbContext(); // <--- здесь проверь dbFactory
+			await using var db = dbFactory?.CreateDbContext(); 
 			if (db == null)
 			{
 				Console.WriteLine("Ошибка: dbFactory == null");
