@@ -109,6 +109,51 @@ namespace BlazorApp1
 			return dataSet;
 		}
 
+		// загрузка данных по 123 форме в базу данных
+		public async Task LoadData123(int regnum, DateTime dt)
+		{
+			await using var db = dbFactory?.CreateDbContext();
+			if (db == null)
+			{
+				Console.WriteLine("Ошибка: dbFactory == null");
+				return;
+			}
+			// загрузить 135 форму в dataset
+			var dataSet = await GetData123(regnum, dt);
+			// объявление списка записей для сохранения в базу
+			var data123Records = new List<DataNor>();
+			// если данные есть
+			if (dataSet == null) return;
+
+			// получить id расчета
+			int id_info = await CreateLoad(regnum, dt);
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				foreach (DataRow row in table.Rows)
+				{
+					var id_tnor = await db.TemplatesNors
+										 .Where(t => t.Code == row["CODE"])
+										 .Select(t => (int?)t.IdTnor)
+										 .FirstOrDefaultAsync();
+
+					// Пробуем распарсить значение
+					if (!decimal.TryParse(row["VALUE"]?.ToString(), out var val))
+						continue; // Пропустить, если значение отсутствует или не число
+
+					data123Records.Add(new DataNor
+					{
+						IdInfo = id_info,
+						IdTnor = id_tnor,
+						Val = val
+					});
+				}
+			}
+
+			db.DataNors.AddRange(data123Records);
+			await db.SaveChangesAsync();
+		}
+
 		// получение данных по форме 135 по рег. номеру банка и дате
 		public async Task<DataSet> GetData135(int regnum, DateTime dt)
 		{
@@ -156,6 +201,7 @@ namespace BlazorApp1
 
 			return dataSet;
 		}
+
 		// загрузка данных по 135 форме в базу данных
 		public async Task LoadData135(int regnum, DateTime dt)
 		{
@@ -172,8 +218,6 @@ namespace BlazorApp1
 			// если данные есть
 			if (dataSet == null) return;
 
-			// получить словарь соответсвий (ap, numsc) - id_t101 шаблона 101 формы
-			//var id_t101s = await FindTemplateId101(dataSet);
 			// получить id расчета
 			int id_info = await CreateLoad(regnum, dt);
 
@@ -190,9 +234,6 @@ namespace BlazorApp1
 					if (!decimal.TryParse(row["V3"]?.ToString(), out var val))
 						continue; // Пропустить, если значение V3 отсутствует или не число
 
-
-					// список объектов типа Data101, которые хотим добавить в базу
-					// добавляем новый объект в список, чтобы потом все записи массово сохранить в базу.
 					data135Records.Add(new DataNor
 					{
 						IdInfo = id_info,

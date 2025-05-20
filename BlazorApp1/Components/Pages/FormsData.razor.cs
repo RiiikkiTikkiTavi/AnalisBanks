@@ -72,6 +72,33 @@ namespace BlazorApp1.Components.Pages
 
 		}
 
+		public async Task SaveData()
+		{
+
+			IsLoading = true; // Показываем "Загрузка данных..."
+			StateHasChanged(); // Принудительно обновляем UI
+			switch (SelectedForm)
+			{
+				case 123:
+					await CreditService.LoadData123(Regnum, OnDate);
+					Console.WriteLine("load 123");
+					break;
+				case 135:
+					await CreditService.LoadData135(Regnum, OnDate);
+					Console.WriteLine("load 135");
+					break;
+				case 101:
+					await CreditService.LoadData101(Regnum, OnDate);
+					Console.WriteLine("load 101");
+					break;
+
+			}
+
+			IsLoading = false; // Данные загружены, скрываем "Загрузка данных..."
+			StateHasChanged(); // Обновляем UI снова
+
+		}
+
 		// проверить содержит ли строка null-значения
 		public bool ContainsNull(DataRow row)
 		{
