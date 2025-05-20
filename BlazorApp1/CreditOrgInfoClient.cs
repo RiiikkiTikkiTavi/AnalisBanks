@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Data;
+using System.Linq;
 using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
@@ -231,12 +232,13 @@ namespace BlazorApp1
                 {
                     string? ap = row["ap"]?.ToString();
                     string? numsc = row["numsc"]?.ToString();
+                    string? pln = row["pln"]?.ToString();
 
                     if (string.IsNullOrWhiteSpace(ap) || string.IsNullOrWhiteSpace(numsc))
                         continue;
 
                     // попытка найти значение по ключу в словаре id_t101s
-                    if (!id_t101s.TryGetValue((ap, numsc), out int id_t101))
+                    if (!id_t101s.TryGetValue((ap, numsc, pln), out int id_t101))
                         continue; // если шаблон не найден — пропускаем
 
                     // Парсим значения
@@ -260,43 +262,46 @@ namespace BlazorApp1
         }
 
 
-        // получить id шаблона 101 формы по счету и его типу (А/П)
-        // возвращает словарь соответсвий (ap, numsc) - id_t101
-        public async Task<Dictionary<(string ap, string numsc), int>> FindTemplateId101(DataSet dataSet)
-        {
-            // Сбор уникальных пар (ap, numsc) из DataSet
-			var keys = new HashSet<(string ap, string numsc)>();
+		// получить id шаблона 101 формы по счету и его типу (А/П)
+		// возвращает словарь соответсвий (ap, numsc, pln) - id_t101
+		public async Task<Dictionary<(string ap, string numsc, string pln), int>> FindTemplateId101(DataSet dataSet)
+		{
+			// Сбор уникальных троек (ap, numsc, pln) из DataSet
+			var keys = new HashSet<(string ap, string numsc, string pln)>();
 
-            await using var db = dbFactory.CreateDbContext();
+			await using var db = dbFactory.CreateDbContext();
 
-            foreach (DataTable table in dataSet.Tables)
-            {
-                foreach (DataRow row in table.Rows)
-                {
-                    string? ap = row["ap"]?.ToString();
-                    string? numsc = row["numsc"]?.ToString();
+			foreach (DataTable table in dataSet.Tables)
+			{
+				foreach (DataRow row in table.Rows)
+				{
+					string? ap = row["ap"]?.ToString();
+					string? numsc = row["numsc"]?.ToString();
+					string? pln = row["pln"]?.ToString();
 
-					if (!string.IsNullOrWhiteSpace(ap) && !string.IsNullOrWhiteSpace(numsc))
+					if (!string.IsNullOrWhiteSpace(ap) &&
+						!string.IsNullOrWhiteSpace(numsc) &&
+						!string.IsNullOrWhiteSpace(pln))
 					{
-						keys.Add((ap, numsc));
+						keys.Add((ap, numsc, pln));
 					}
-                }
-            }
+				}
+			}
 
-            // Загружаем всё из templates_101 в память
-            var allTemplates = await db.Templates101s.ToListAsync();
+			// Загружаем шаблоны из БД
+			var allTemplates = await db.Templates101s.ToListAsync();
 
-            // Фильтруем в памяти
-            var matched = allTemplates
-                .Where(t => keys.Contains((t.AP, t.Name)))
-                .ToDictionary(t => (t.AP, t.Name), t => t.IdT101);
+			// Фильтруем по тройке (ap, name, plan)
+			var matched = allTemplates
+				.Where(t => keys.Contains((t.AP, t.Name, t.Plan.ToString())))
+				.ToDictionary(t => (t.AP, t.Name, t.Plan.ToString()), t => t.IdT101);
 
-            return matched;
-        }
+			return matched;
+		}
 
 
-        // создание загрузки данных форм, заполнение банка и даты
-        public async Task<int> CreateLoad(int regnum, DateTime dt)
+		// создание загрузки данных форм, заполнение банка и даты
+		public async Task<int> CreateLoad(int regnum, DateTime dt)
 		{
             await using var db = dbFactory.CreateDbContext();
             var dateOnly = DateOnly.FromDateTime(dt);
