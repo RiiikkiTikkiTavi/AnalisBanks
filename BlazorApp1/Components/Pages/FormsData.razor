@@ -39,7 +39,7 @@
 
 <p>@BankName</p>
 
-@if (IsLoading)
+@if (IsLoading && ShowToast)
 {
 	<p>Загрузка данных...</p>
 }
@@ -80,6 +80,19 @@ else
 		}
 	}
 
+
+	<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+		<div class="toast show" role="alert" aria-live="assertive" aria-atomic="true"
+			 style="min-width: 250px;" hidden="@(!ShowToast)">
+			<div class="toast-header">
+				<strong class="me-auto text-success">Успешно</strong>
+				<button type="button" class="btn-close" @onclick="() => ShowToast = false"></button>
+			</div>
+			<div class="toast-body">
+				@ToastMessage
+			</div>
+		</div>
+	</div>
 	
 }
 

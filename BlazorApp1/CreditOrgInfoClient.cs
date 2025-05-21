@@ -5,6 +5,7 @@ using global::CregitInfoWS;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using System;
 using System.Data;
 using System.Linq;
@@ -22,6 +23,7 @@ namespace BlazorApp1
 	public class CreditOrgInfoClient
 	{
 		private readonly CreditOrgInfoSoap _client;
+
 
 		/*		[Inject]
 				private IDbContextFactory<BanksContext> dbFactory { get; set; } = default!;
@@ -43,6 +45,8 @@ namespace BlazorApp1
 			_client = client;
 			this.dbFactory = dbFactory;
 		}
+
+		private bool rewrite = false;
 
 		//вспомогательный метод - вывод dataset в консоль
 		private void ShowDataSet(DataSet dataSet)
@@ -109,50 +113,108 @@ namespace BlazorApp1
 			return dataSet;
 		}
 
-		// загрузка данных по 123 форме в базу данных
-		public async Task LoadData123(int regnum, DateTime dt)
+		private async Task LoadDataGeneric(
+			int regnum,
+			DateTime dt,
+			string codeColumn,
+			string valueColumn,
+			Func<Task<DataSet>> getDataFunc)
 		{
+			// Получаем контекст базы данных
 			await using var db = dbFactory?.CreateDbContext();
 			if (db == null)
 			{
 				Console.WriteLine("Ошибка: dbFactory == null");
 				return;
 			}
-			// загрузить 135 форму в dataset
-			var dataSet = await GetData123(regnum, dt);
-			// объявление списка записей для сохранения в базу
-			var data123Records = new List<DataNor>();
-			// если данные есть
+
+			// Загружаем данные формы
+			var dataSet = await getDataFunc();
 			if (dataSet == null) return;
 
-			// получить id расчета
+			// Получаем идентификатор расчета (id_info)
 			int id_info = await CreateLoad(regnum, dt);
 
-			foreach (DataTable table in dataSet.Tables)
+			var dataRecords = new List<DataNor>();        // Список новых записей для сохранения
+			var validTnors = new HashSet<int>();          // Список id_tnor, найденных по кодам шаблонов
+
+			// Обход всех таблиц и строк внутри DataSet
+			foreach (var table in dataSet.Tables.Cast<DataTable>())
 			{
 				foreach (DataRow row in table.Rows)
 				{
+					var code = row[codeColumn]?.ToString();
+					if (string.IsNullOrWhiteSpace(code)) continue;
+
+					// Ищем соответствующий шаблон в базе
 					var id_tnor = await db.TemplatesNors
-										 .Where(t => t.Code == row["CODE"])
-										 .Select(t => (int?)t.IdTnor)
-										 .FirstOrDefaultAsync();
+										  .Where(t => t.Code == code)
+										  .Select(t => (int?)t.IdTnor)
+										  .FirstOrDefaultAsync();
+
+					// Пропускаем, если шаблон не найден
+					if (id_tnor == null) continue;
 
 					// Пробуем распарсить значение
-					if (!decimal.TryParse(row["VALUE"]?.ToString(), out var val))
-						continue; // Пропустить, если значение отсутствует или не число
+					if (!decimal.TryParse(row[valueColumn]?.ToString(), out var val)) continue;
 
-					data123Records.Add(new DataNor
+					// Добавляем id_tnor в набор для возможного удаления старых записей
+					validTnors.Add(id_tnor.Value);
+
+					// Добавляем запись в список
+					dataRecords.Add(new DataNor
 					{
 						IdInfo = id_info,
-						IdTnor = id_tnor,
+						IdTnor = id_tnor.Value,
 						Val = val
 					});
 				}
 			}
 
-			db.DataNors.AddRange(data123Records);
-			await db.SaveChangesAsync();
+			// Удаление старых данных, если задан rewrite = true
+			if (rewrite && validTnors.Any())
+			{
+				var toDelete = await db.DataNors
+									   .Where(d => d.IdInfo == id_info && validTnors.Contains(d.IdTnor ?? -1))
+									   .ToListAsync();
+
+				if (toDelete.Any())
+				{
+					db.DataNors.RemoveRange(toDelete);
+					await db.SaveChangesAsync();
+				}
+			}
+
+			// Сохранение новых данных
+			if (dataRecords.Any())
+			{
+				db.DataNors.AddRange(dataRecords);
+				await db.SaveChangesAsync();
+			}
 		}
+		public async Task LoadData123(int regnum, DateTime dt)
+		{
+			await LoadDataGeneric(
+				regnum,
+				dt,
+				codeColumn: "CODE",
+				valueColumn: "VALUE",
+				getDataFunc: () => GetData123(regnum, dt)
+			);
+		}
+
+		public async Task LoadData135(int regnum, DateTime dt)
+		{
+			await LoadDataGeneric(
+				regnum,
+				dt,
+				codeColumn: "C3",
+				valueColumn: "V3",
+				getDataFunc: () => GetData135(regnum, dt)
+			);
+		}
+
+
 
 		// получение данных по форме 135 по рег. номеру банка и дате
 		public async Task<DataSet> GetData135(int regnum, DateTime dt)
@@ -203,6 +265,7 @@ namespace BlazorApp1
 		}
 
 		// загрузка данных по 135 форме в базу данных
+		/*
 		public async Task LoadData135(int regnum, DateTime dt)
 		{
 			await using var db = dbFactory?.CreateDbContext(); 
@@ -243,10 +306,12 @@ namespace BlazorApp1
 				}
 			}
 
+
+
 			db.DataNors.AddRange(data135Records);
 			await db.SaveChangesAsync();
 		}
-
+		*/
 
 		// получение данных по форме 101 по рег. номеру банка и дате
 		public async Task<DataSet> GetData101(int regnum, DateTime dt)
@@ -315,10 +380,20 @@ namespace BlazorApp1
 
             // получить словарь соответсвий (ap, numsc) - id_t101 шаблона 101 формы
             var id_t101s = await FindTemplateId101(dataSet);
-				// получить id расчета
-				int id_info = await CreateLoad(regnum, dt);
+			// получить id расчета
+			int id_info = await CreateLoad(regnum, dt);
 
-            foreach (DataTable table in dataSet.Tables)
+			// удалить старые данные
+			if (rewrite)
+			{
+				var existingRecords = await db.Data101s
+											  .Where(d => d.IdInfo == id_info)
+											  .ToListAsync();
+				db.Data101s.RemoveRange(existingRecords);
+				await db.SaveChangesAsync();
+			}
+
+			foreach (DataTable table in dataSet.Tables)
             {
                 foreach (DataRow row in table.Rows)
                 {
@@ -402,8 +477,12 @@ namespace BlazorApp1
             var existing = await db.FormInfos
                 .FirstOrDefaultAsync(x => x.Regnum == regnum && x.Dt == dateOnly);
 
-            if (existing != null)
-                return existing.IdInfo;
+			if (existing != null) 
+			{ 
+				rewrite = true; // стереть и записать данные заново
+
+				return existing.IdInfo; 
+			}
 
             // Создание новой записи
             var record = new FormInfo

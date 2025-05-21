@@ -18,6 +18,8 @@ namespace BlazorApp1.Components.Pages
 		DataSet ds;
 		private bool isLoading = false;
 		private bool showNulls = false;
+		private bool ShowToast = false;
+		private string ToastMessage = "";
 
 		private int selectedForm = 135; // ID формы по умолчанию
 		private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
@@ -35,6 +37,7 @@ namespace BlazorApp1.Components.Pages
 
 		[Inject]
 		public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
+		
 
 		private async Task LoadData2()
 		{
@@ -81,20 +84,30 @@ namespace BlazorApp1.Components.Pages
 			{
 				case 123:
 					await CreditService.LoadData123(Regnum, OnDate);
+					ToastMessage = "Данные 123 формы загружены";
 					Console.WriteLine("load 123");
 					break;
 				case 135:
 					await CreditService.LoadData135(Regnum, OnDate);
+					ToastMessage = "Данные 135 формы загружены";
 					Console.WriteLine("load 135");
 					break;
 				case 101:
 					await CreditService.LoadData101(Regnum, OnDate);
+					ToastMessage = "Данные 101 формы загружены";
 					Console.WriteLine("load 101");
 					break;
 
 			}
 
 			IsLoading = false; // Данные загружены, скрываем "Загрузка данных..."
+			ShowToast = true;
+			StateHasChanged();
+
+			// Автоматически скрыть через 3 секунды
+			await Task.Delay(3000);
+			ShowToast = false;
+			
 			StateHasChanged(); // Обновляем UI снова
 
 		}
