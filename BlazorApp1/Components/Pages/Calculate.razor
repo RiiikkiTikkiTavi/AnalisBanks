@@ -1,6 +1,7 @@
 ﻿@page "/calculate"
 @using BlazorApp1.Models
 @using BlazorBootstrap
+@using System.Text.RegularExpressions
 
 @rendermode InteractiveServer
 
@@ -104,24 +105,83 @@
     }
     private async Task OnMethodChanged(ChangeEventArgs e)
     {
-        /*await using var db = dbFactory.CreateDbContext();
-        args = await db.Arguments.Where(a => a.IdMethods == selectedMethod).ToListAsync();*/
         await LoadArguments(selectedMethod);
         StateHasChanged();
 
     }
 
     private CreditOrgInfoClient _creditService;
+    [Inject]
+    public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
     private Modal modal = default!;
     private Modal tempModal = default!;
 
-    private void Calcs()
+    private async void Calcs2()
     {
-        //await using var db = dbFactory.CreateDbContext();
-        
-    
+        await using var db = dbFactory.CreateDbContext();
+        // получить формулу expression показателя по id_arg
+        // получить состав формулы consist, который имеет вид А950,А992,А901,
+        // представить consist в виде массива
+        // найти в таблице data101 по id (950,992,901 соответственно) значения vint
+        // заменить параметры (значения в фигурных скобках) в формуле {303П}+{446П}-{446А}*3.4+140 на эти значение vint соответсвенно
+        // распарсить формулу и рассчитать значение
+
+
     }
+    private async void Calcs()
+    {
+        await using var db = dbFactory.CreateDbContext();
+
+        foreach (var arg in args)
+        {
+            // 1. Получаем формулу
+            string? expression = arg.Expression;
+            string? consist = arg.Consist;
+
+            if (string.IsNullOrWhiteSpace(expression) || string.IsNullOrWhiteSpace(consist))
+                continue;
+
+            // 2. Разбиваем состав на идентификаторы показателей: "A950,A992,A901" → [950, 992, 901]
+            var ids = consist
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => s.StartsWith("A") && int.TryParse(s[1..], out _))
+                .Select(s => int.Parse(s[1..]))
+                .Distinct()
+                .ToList();
+
+            // 3. Загружаем значения vint из таблицы data101
+            var data = await db.Data101s
+                .Where(d => ids.Contains(d.IdT101 ?? -1))
+                .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+
+            // 4. Подстановка значений в формулу
+            // Пример: {950П} → заменить 950 на значение из data[950], оставив суффикс (П/А) если нужен
+            var parsedExpression = Regex.Replace(expression, @"\{(\d+)([ПА]?)\}", match =>
+            {
+                var idStr = match.Groups[1].Value;
+                var suffix = match.Groups[2].Value;
+                if (int.TryParse(idStr, out int id) && data.TryGetValue(id, out decimal val))
+                {
+                    return val.ToString(CultureInfo.InvariantCulture); // корректный формат чисел
+                }
+                return "0"; // если данных нет — заменяем на 0
+            });
+
+            try
+            {
+                // 5. Вычисляем значение выражения с помощью DataTable.Compute или стороннего парсера
+                var result = new DataTable().Compute(parsedExpression, null);
+                Console.WriteLine($"Итоговое значение показателя '{arg.Name}' = {result}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при вычислении формулы '{expression}': {ex.Message}");
+            }
+        }
+    }
+
 
    
     private async Task OnShowModalClick()

@@ -113,7 +113,7 @@ namespace BlazorApp1
 			return dataSet;
 		}
 
-		private async Task LoadDataGeneric(
+		private async Task LoadData(
 			int regnum,
 			DateTime dt,
 			string codeColumn,
@@ -194,7 +194,7 @@ namespace BlazorApp1
 		}
 		public async Task LoadData123(int regnum, DateTime dt)
 		{
-			await LoadDataGeneric(
+			await LoadData(
 				regnum,
 				dt,
 				codeColumn: "CODE",
@@ -205,7 +205,7 @@ namespace BlazorApp1
 
 		public async Task LoadData135(int regnum, DateTime dt)
 		{
-			await LoadDataGeneric(
+			await LoadData(
 				regnum,
 				dt,
 				codeColumn: "C3",
