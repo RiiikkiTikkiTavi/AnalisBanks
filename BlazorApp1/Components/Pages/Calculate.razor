@@ -22,20 +22,9 @@
     <InputDate @bind-Value="OnDate" class="form-control w-auto" />
 
 
-<button class="btn btn-primary" @onclick="Calcs2">Рассчитать</button>
+<button class="btn btn-primary" @onclick="Calcs">Рассчитать</button>
 </div>
 
-<input type="text" value="@test"
-       class="form-control w-50"
-       placeholder="Введите формулу" />
-
-
-
-
-<button class="btn btn-primary" @onclick="() =>ToPostfix(test)">Рассчитать</button>
-
-<input type="text" value="@test2"
-       class="form-control w-50" />
 
 @if (args?.Any() == true)
 {
@@ -132,7 +121,7 @@
 
     private async void Calcs2()
     {
-        await using var db = dbFactory.CreateDbContext();
+        //await using var db = dbFactory.CreateDbContext();
         // получить формулу expression показателя по id_arg
         // получить состав формулы consist, который имеет вид А950,А992,А901,
         // представить consist в виде массива
@@ -140,10 +129,13 @@
         // заменить параметры (значения в фигурных скобках) в формуле {303П}+{446П}-{446А}*3.4+140 на эти значение vint соответсвенно
         // распарсить формулу и рассчитать значение
 
+        var test2 = ToPostfix(test);
+        var result = EvaluatePostfix(test2);
+        Console.WriteLine("result" + result);
 
     }
 
-    private string test = "7*9.8+7+(4^2)-1";
+    private string test { get; set; } = string.Empty;
     private List<string> test2;
     private double result3 = 0;
 
@@ -230,13 +222,13 @@
         return output;
         
     }
-    private static decimal EvaluatePostfix(List<string> tokens)
+    private static decimal EvaluatePostfix(List<string> express)
     {
         var stack = new Stack<decimal>();
 
-        foreach (var token in tokens)
+        foreach (var exp in express)
         {
-            if (decimal.TryParse(token, NumberStyles.Any, CultureInfo.InvariantCulture, out var number))
+            if (decimal.TryParse(exp, NumberStyles.Any, CultureInfo.InvariantCulture, out var number))
             {
                 stack.Push(number);
             }
@@ -245,15 +237,15 @@
                 var b = stack.Pop();
                 var a = stack.Pop();
 
-                decimal result = token switch
+                decimal result = exp switch
                 {
                     "+" => a + b,
                     "-" => a - b,
                     "*" => a * b,
                     "/" => b != 0 ? a / b : throw new DivideByZeroException(),
-                    "%" => a % b,
+                    "%" => a * b / 100,
                     "^" => (decimal)Math.Pow((double)a, (double)b),
-                    _ => throw new InvalidOperationException($"Неизвестный оператор: {token}")
+                    _ => throw new InvalidOperationException($"Неизвестный оператор: {exp}")
                 };
 
                 stack.Push(result);
@@ -264,7 +256,7 @@
     }
 
 
-    /*
+    
     private async void Calcs()
     {
         await using var db = dbFactory.CreateDbContext();
@@ -292,15 +284,15 @@
                 .Where(d => ids.Contains(d.IdT101 ?? -1))
                 .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
 
-            // 4. Подстановка значений в формулу
-            // Пример: {950П} → заменить 950 на значение из data[950], оставив суффикс (П/А) если нужен
+            // Подстановка значений в формулу
+            // {950П} заменить на значение из data[950]
             var parsedExpression = Regex.Replace(expression, @"\{(\d+)([ПА]?)\}", match =>
             {
                 var idStr = match.Groups[1].Value;
-                var suffix = match.Groups[2].Value;
-                if (int.TryParse(idStr, out int id) && data.TryGetValue(id, out decimal val))
+                if (int.TryParse(idStr, out int id))
                 {
-                    return val.ToString(CultureInfo.InvariantCulture); // корректный формат чисел
+                    decimal val = data.TryGetValue(id, out decimal? nullableVal) ? nullableVal ?? 0 : 0; //если nullableVal null, заменяем на 0
+                    return val.ToString("G", CultureInfo.InvariantCulture);
                 }
                 return "0"; // если данных нет — заменяем на 0
             });
@@ -308,7 +300,8 @@
             try
             {
                 // 5. Вычисляем значение выражения с помощью DataTable.Compute или стороннего парсера
-                var result = new DataTable().Compute(parsedExpression, null);
+                var readyExpr = ToPostfix(parsedExpression);
+                var result = EvaluatePostfix(readyExpr);
                 Console.WriteLine($"Итоговое значение показателя '{arg.Name}' = {result}");
             }
             catch (Exception ex)
@@ -318,7 +311,7 @@
         }
     }
 
-    */
+    
    
     private async Task OnShowModalClick()
     {
