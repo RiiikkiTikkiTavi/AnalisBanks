@@ -25,16 +25,29 @@
 <button class="btn btn-primary" @onclick="Calcs">Рассчитать</button>
 </div>
 
-
-@if (args?.Any() == true)
+@if (args != null && args.Any())
 {
-    <ul class="mt-3">
-        @foreach (var arg in args)
-        {
-            <li>@arg.Name</li>
-        }
-    </ul>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Показатель</th>
+                <th>Краткое название</th>
+                <th>Значение</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var a in args)
+            {
+                <tr>
+                    <td>@a.Name</td>
+                    <td>@a.ShortName</td>
+                    <td>3</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 }
+
 <!--else
 {
     <div class="text-muted mt-3">Нет показателей для выбранной методики.</div>
@@ -72,6 +85,7 @@
     public int Regnum { get => regnum; set => regnum = value; }
     public string BankName { get => bankName; set => bankName = value; }
     public DateTime OnDate { get => onDate; set => onDate = value; }
+
     private int SelectedMethod
     {
         get => selectedMethod;
@@ -104,10 +118,16 @@
     {
         await using var db = dbFactory.CreateDbContext();
         args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
+        Console.WriteLine($"Args");
+        Console.WriteLine(string.Join(Environment.NewLine, args.Select(arg => $"Name: {arg.Name}, Id: {arg.IdArg}")));
+        Console.WriteLine($"Method {idMeth}");
+        StateHasChanged();
     }
     private async Task OnMethodChanged(ChangeEventArgs e)
     {
+        Console.WriteLine("selectedMethod" + selectedMethod);
         await LoadArguments(selectedMethod);
+
         StateHasChanged();
 
     }
@@ -137,7 +157,7 @@
 
     private string test { get; set; } = string.Empty;
     private List<string> test2;
-    private double result3 = 0;
+    private decimal result = 0;
 
     private static List<string> ToPostfix(string expression)
     {
@@ -220,7 +240,7 @@
         }
         Console.WriteLine("Expr: " + string.Join(" ", output));
         return output;
-        
+
     }
     private static decimal EvaluatePostfix(List<string> express)
     {
@@ -256,60 +276,90 @@
     }
 
 
-    
+
     private async void Calcs()
     {
         await using var db = dbFactory.CreateDbContext();
+        Console.WriteLine("Calcs");
 
         foreach (var arg in args)
         {
-            // 1. Получаем формулу
+            Console.WriteLine("arg " + arg.ShortName);
             string? expression = arg.Expression;
             string? consist = arg.Consist;
+            Console.WriteLine("exp " + expression + " con " + consist);
 
             if (string.IsNullOrWhiteSpace(expression) || string.IsNullOrWhiteSpace(consist))
                 continue;
 
-            // 2. Разбиваем состав на идентификаторы показателей: "A950,A992,A901" → [950, 992, 901]
-            var ids = consist
-                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            // Разбиваем состав на ID: "A950,A992,A901" → [950, 992, 901]
+            /*var ids = consist
+                .Split(',')
                 .Select(s => s.Trim())
-                .Where(s => s.StartsWith("A") && int.TryParse(s[1..], out _))
+                //.Where(s => s.StartsWith("A"))
                 .Select(s => int.Parse(s[1..]))
+                .ToList();*/
+
+            var ids = consist
+            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => int.Parse(s[1..]))
+            .ToList();
+
+            Console.WriteLine("ids");
+            Console.WriteLine(string.Join(Environment.NewLine,ids));
+
+            // Извлекаем параметры из expression: {656П}, {992}, {901А} и т.д.
+            var paramMatches = Regex.Matches(expression, @"\{(\d+)([ПА]?)\}")
+                .Cast<Match>()
+                .Select(m => m.Value)
                 .Distinct()
                 .ToList();
 
-            // 3. Загружаем значения vint из таблицы data101
+            Console.WriteLine("paramMatches");
+            Console.WriteLine(string.Join(Environment.NewLine, paramMatches));
+
+            if (paramMatches.Count != ids.Count)
+            {
+                Console.WriteLine($"Incorrect amount: {arg.Name}");
+                continue;
+            }
+
+            // Строим соответствие параметр -> id
+            var paramToIdMap = paramMatches
+                .Zip(ids, (param, id) => new { param, id })
+                .ToDictionary(x => x.param, x => x.id);
+
+            // Загружаем значения vint из таблицы data101
             var data = await db.Data101s
                 .Where(d => ids.Contains(d.IdT101 ?? -1))
                 .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
 
             // Подстановка значений в формулу
-            // {950П} заменить на значение из data[950]
             var parsedExpression = Regex.Replace(expression, @"\{(\d+)([ПА]?)\}", match =>
             {
-                var idStr = match.Groups[1].Value;
-                if (int.TryParse(idStr, out int id))
+                Console.WriteLine("parsedExpression");
+                var fullParam = match.Value; // {656П}
+                if (paramToIdMap.TryGetValue(fullParam, out int id))
                 {
-                    decimal val = data.TryGetValue(id, out decimal? nullableVal) ? nullableVal ?? 0 : 0; //если nullableVal null, заменяем на 0
+                    decimal val = data.TryGetValue(id, out decimal? nullableVal) ? nullableVal ?? 0 : 0;
                     return val.ToString("G", CultureInfo.InvariantCulture);
                 }
-                return "0"; // если данных нет — заменяем на 0
+                return "0";
             });
 
             try
             {
-                // 5. Вычисляем значение выражения с помощью DataTable.Compute или стороннего парсера
                 var readyExpr = ToPostfix(parsedExpression);
-                var result = EvaluatePostfix(readyExpr);
-                Console.WriteLine($"Итоговое значение показателя '{arg.Name}' = {result}");
+                result = Math.Round(EvaluatePostfix(readyExpr),2);
+                Console.WriteLine($"Itog '{arg.Name}' = {result}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при вычислении формулы '{expression}': {ex.Message}");
+                Console.WriteLine($"Error '{expression}': {ex.Message}");
             }
         }
     }
+
 
     
    

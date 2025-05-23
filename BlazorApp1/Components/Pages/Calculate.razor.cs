@@ -8,7 +8,7 @@ namespace BlazorApp1.Components.Pages
 
 
 		private string input = "";
-		private double result = 0;
+		private double result3 = 0;
 		private string display;
         private string consist;
 
@@ -129,7 +129,7 @@ namespace BlazorApp1.Components.Pages
 			var variables = new Dictionary<string, FloatingPoint> { { ("x"), 1 } };
 
 			// Вычисляем выражение с подстановкой значений
-			result = Evaluate.Evaluate(variables, expr).RealValue;
+			result3 = Evaluate.Evaluate(variables, expr).RealValue;
 
 			Console.WriteLine($"Result: {Display}");
 		}
@@ -138,7 +138,7 @@ namespace BlazorApp1.Components.Pages
 		public void Clear()
 		{
 			Display = "";
-			result = 0;
+			result3 = 0;
 		}
 
 	}
