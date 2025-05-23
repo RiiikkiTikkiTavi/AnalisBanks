@@ -133,7 +133,7 @@ namespace BlazorApp1
 			if (dataSet == null) return;
 
 			// Получаем идентификатор расчета (id_info)
-			int id_info = await CreateLoad(regnum, dt);
+			int id_info = await CreateLoadInfo(regnum, dt);
 
 			var dataRecords = new List<DataNor>();        // Список новых записей для сохранения
 			var validTnors = new HashSet<int>();          // Список id_tnor, найденных по кодам шаблонов
@@ -381,7 +381,7 @@ namespace BlazorApp1
             // получить словарь соответсвий (ap, numsc) - id_t101 шаблона 101 формы
             var id_t101s = await FindTemplateId101(dataSet);
 			// получить id расчета
-			int id_info = await CreateLoad(regnum, dt);
+			int id_info = await CreateLoadInfo(regnum, dt);
 
 			// удалить старые данные
 			if (rewrite)
@@ -468,7 +468,7 @@ namespace BlazorApp1
 
 
 		// создание загрузки данных форм, заполнение банка и даты
-		public async Task<int> CreateLoad(int regnum, DateTime dt)
+		public async Task<int> CreateLoadInfo(int regnum, DateTime dt)
 		{
             await using var db = dbFactory.CreateDbContext();
             var dateOnly = DateOnly.FromDateTime(dt);

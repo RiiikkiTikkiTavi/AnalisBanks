@@ -41,7 +41,7 @@
                 <tr>
                     <td>@a.Name</td>
                     <td>@a.ShortName</td>
-                    <td>3</td>
+                    <td>resul</td>
                 </tr>
             }
         </tbody>
@@ -282,6 +282,8 @@
         await using var db = dbFactory.CreateDbContext();
         Console.WriteLine("Calcs");
 
+        var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
+
         foreach (var arg in args)
         {
             Console.WriteLine("arg " + arg.ShortName);
@@ -291,14 +293,6 @@
 
             if (string.IsNullOrWhiteSpace(expression) || string.IsNullOrWhiteSpace(consist))
                 continue;
-
-            // Разбиваем состав на ID: "A950,A992,A901" → [950, 992, 901]
-            /*var ids = consist
-                .Split(',')
-                .Select(s => s.Trim())
-                //.Where(s => s.StartsWith("A"))
-                .Select(s => int.Parse(s[1..]))
-                .ToList();*/
 
             var ids = consist
             .Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -325,20 +319,27 @@
             }
 
             // Строим соответствие параметр -> id
-            var paramToIdMap = paramMatches
+           /* var paramToIdMap = paramMatches
                 .Zip(ids, (param, id) => new { param, id })
                 .ToDictionary(x => x.param, x => x.id);
+                */
+
+            Dictionary<string, int> paramToIdMap = new();
+            for (int i = 0; i < paramMatches.Count; i++)
+            {
+                paramToIdMap[paramMatches[i]] = ids[i];
+            }
 
             // Загружаем значения vint из таблицы data101
             var data = await db.Data101s
-                .Where(d => ids.Contains(d.IdT101 ?? -1))
-                .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+            .Where(d => ids.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
+            .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
 
             // Подстановка значений в формулу
             var parsedExpression = Regex.Replace(expression, @"\{(\d+)([ПА]?)\}", match =>
             {
                 Console.WriteLine("parsedExpression");
-                var fullParam = match.Value; // {656П}
+                var fullParam = match.Value;
                 if (paramToIdMap.TryGetValue(fullParam, out int id))
                 {
                     decimal val = data.TryGetValue(id, out decimal? nullableVal) ? nullableVal ?? 0 : 0;
@@ -351,6 +352,8 @@
             {
                 var readyExpr = ToPostfix(parsedExpression);
                 result = Math.Round(EvaluatePostfix(readyExpr),2);
+
+
                 Console.WriteLine($"Itog '{arg.Name}' = {result}");
             }
             catch (Exception ex)
