@@ -82,6 +82,9 @@
 
     private int selectedMethod = 0; // ID формы по умолчанию
 
+
+    private MethodsResult Result { get; set; } = new();
+
     public int Regnum { get => regnum; set => regnum = value; }
     public string BankName { get => bankName; set => bankName = value; }
     public DateTime OnDate { get => onDate; set => onDate = value; }
@@ -319,11 +322,6 @@
             }
 
             // Строим соответствие параметр -> id
-           /* var paramToIdMap = paramMatches
-                .Zip(ids, (param, id) => new { param, id })
-                .ToDictionary(x => x.param, x => x.id);
-                */
-
             Dictionary<string, int> paramToIdMap = new();
             for (int i = 0; i < paramMatches.Count; i++)
             {
@@ -353,6 +351,14 @@
                 var readyExpr = ToPostfix(parsedExpression);
                 result = Math.Round(EvaluatePostfix(readyExpr),2);
 
+                Result.IdInfo = info;
+                Result.IdArg = arg.IdArg;
+                Result.Val = result;
+                //await using var db = dbFactory.CreateDbContext();
+                db.MethodsResults.Add(Result);  // добавление
+                await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
+                Console.WriteLine("Save argument");
+              
 
                 Console.WriteLine($"Itog '{arg.Name}' = {result}");
             }
