@@ -41,7 +41,8 @@
                 <tr>
                     <td>@a.Name</td>
                     <td>@a.Expression</td>
-                    <td>resul</td>
+                    <td>@(results.TryGetValue(a.IdArg, out var val) ? val.ToString("0.##") : "—")</td>
+
                 </tr>
             }
         </tbody>
@@ -74,21 +75,14 @@
     // внедрение фабрики для создания экземпляров BanksContext.
     [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
     private int regnum = 1000;
-    private string bankName;
     //private DateTime onDate = DateTime.Today;
     private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+    private CreditOrgInfoClient _creditService;
+    [Inject]
+    public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
-    private bool isLoading = false;
 
-    private int selectedMethod = 0; // ID формы по умолчанию
-
-
-    private MethodsResult Result { get; set; } = new();
-
-    public int Regnum { get => regnum; set => regnum = value; }
-    public string BankName { get => bankName; set => bankName = value; }
-    public DateTime OnDate { get => onDate; set => onDate = value; }
-
+    private int selectedMethod = 0; // ID метода по умолчанию
     private int SelectedMethod
     {
         get => selectedMethod;
@@ -101,9 +95,18 @@
             }
         }
     }
+
     private List<Method> methods = new(); // Список методик
     private List<Argument> args;
+    private Dictionary<int, decimal> results = new();
     private Argument Arg { get; set; } = new();
+
+    private MethodsResult Result { get; set; } = new();
+
+    public int Regnum { get => regnum; set => regnum = value; }
+    public DateTime OnDate { get => onDate; set => onDate = value; }
+
+
 
     private async Task LoadMethods()
     {
@@ -135,33 +138,14 @@
 
     }
 
-    private CreditOrgInfoClient _creditService;
-    [Inject]
-    public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
+
 
     private Modal modal = default!;
     private Modal tempModal = default!;
 
-    private async void Calcs2()
-    {
-        //await using var db = dbFactory.CreateDbContext();
-        // получить формулу expression показателя по id_arg
-        // получить состав формулы consist, который имеет вид А950,А992,А901,
-        // представить consist в виде массива
-        // найти в таблице data101 по id (950,992,901 соответственно) значения vint
-        // заменить параметры (значения в фигурных скобках) в формуле {303П}+{446П}-{446А}*3.4+140 на эти значение vint соответсвенно
-        // распарсить формулу и рассчитать значение
-
-        var test2 = ToPostfix(test);
-        var result = EvaluatePostfix(test2);
-        Console.WriteLine("result" + result);
-
-    }
-
-    private string test { get; set; } = string.Empty;
-    private List<string> test2;
     private decimal result = 0;
 
+    // преобразование формулы в постфиксный вид
     private static List<string> ToPostfix(string expression)
     {
         var output = new List<string>();
@@ -245,6 +229,8 @@
         return output;
 
     }
+
+    // расчет формулы
     private static decimal EvaluatePostfix(List<string> express)
     {
         var stack = new Stack<decimal>();
@@ -278,18 +264,17 @@
         return stack.Pop();
     }
 
-
-
+    //
     private async void Calcs()
     {
-        
+
         Console.WriteLine("Calcs");
         await using var db = dbFactory.CreateDbContext();
         var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
 
         foreach (var arg in args)
         {
-            
+
             Console.WriteLine("arg " + arg.ShortName);
             string? expression = arg.Expression;
             string? consist = arg.Consist;
@@ -362,9 +347,12 @@
                 db.MethodsResults.Add(resultEntity);
                 await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
                 Console.WriteLine("Save argument");
-              
+
+                results[arg.IdArg] = result;
+
 
                 Console.WriteLine($"Itog '{arg.Name}' = {result}");
+                StateHasChanged();
             }
             catch (Exception ex)
             {
