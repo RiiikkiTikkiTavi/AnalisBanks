@@ -40,7 +40,7 @@
             {
                 <tr>
                     <td>@a.Name</td>
-                    <td>@a.ShortName</td>
+                    <td>@a.Expression</td>
                     <td>resul</td>
                 </tr>
             }
@@ -282,13 +282,14 @@
 
     private async void Calcs()
     {
-        await using var db = dbFactory.CreateDbContext();
+        
         Console.WriteLine("Calcs");
-
+        await using var db = dbFactory.CreateDbContext();
         var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
 
         foreach (var arg in args)
         {
+            
             Console.WriteLine("arg " + arg.ShortName);
             string? expression = arg.Expression;
             string? consist = arg.Consist;
@@ -351,11 +352,14 @@
                 var readyExpr = ToPostfix(parsedExpression);
                 result = Math.Round(EvaluatePostfix(readyExpr),2);
 
-                Result.IdInfo = info;
-                Result.IdArg = arg.IdArg;
-                Result.Val = result;
-                //await using var db = dbFactory.CreateDbContext();
-                db.MethodsResults.Add(Result);  // добавление
+                var resultEntity = new MethodsResult
+                    {
+                        IdInfo = info,
+                        IdArg = arg.IdArg,
+                        Val = result
+                    };
+
+                db.MethodsResults.Add(resultEntity);
                 await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
                 Console.WriteLine("Save argument");
               
