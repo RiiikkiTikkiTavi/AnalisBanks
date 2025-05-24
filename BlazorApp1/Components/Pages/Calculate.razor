@@ -225,7 +225,6 @@
         {
             output.Add(operators.Pop().ToString());
         }
-        Console.WriteLine("Expr: " + string.Join(" ", output));
         return output;
 
     }
@@ -309,7 +308,7 @@
             Console.WriteLine(string.Join(Environment.NewLine, nIds));
 
             // Ищем параметры в выражении
-            var paramMatches = Regex.Matches(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)?)([ПА]?)\}")
+            var paramMatches = Regex.Matches(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}")
     .Cast<Match>()
     .Select(m => m.Value)
     .Distinct()
@@ -345,7 +344,7 @@
                 .ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
 
             // Подстановка значений в формулу
-            var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)?)([ПА]?)\}", match =>
+            var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}", match =>
             {
                 string param = match.Value;
 
