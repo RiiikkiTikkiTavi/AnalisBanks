@@ -283,50 +283,81 @@
             if (string.IsNullOrWhiteSpace(expression) || string.IsNullOrWhiteSpace(consist))
                 continue;
 
-            var ids = consist
-            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .Select(s => int.Parse(s[1..]))
-            .ToList();
-
-            Console.WriteLine("ids");
-            Console.WriteLine(string.Join(Environment.NewLine,ids));
-
-            // Извлекаем параметры из expression: {656П}, {992}, {901А} и т.д.
-            var paramMatches = Regex.Matches(expression, @"\{(\d+)([ПА]?)\}")
-                .Cast<Match>()
-                .Select(m => m.Value)
-                .Distinct()
+            // Разбиваем на строки и сохраняем с префиксами
+            var rawIds = consist
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
                 .ToList();
+
+            Console.WriteLine("rawIds ");
+            Console.WriteLine(string.Join(Environment.NewLine, rawIds));
+           
+
+            // Разбиваем по типу источника
+            var aIds = rawIds
+                .Where(s => s.StartsWith("А", StringComparison.OrdinalIgnoreCase))
+                .Select(s => int.Parse(s[1..]))
+                .ToList();
+            Console.WriteLine("aIds ");
+            Console.WriteLine(string.Join(Environment.NewLine, aIds));
+
+            var nIds = rawIds
+                .Where(s => s.StartsWith("Н", StringComparison.OrdinalIgnoreCase))
+                .Select(s => int.Parse(s[1..]))
+                .ToList();
+            Console.WriteLine("nIds ");
+            Console.WriteLine(string.Join(Environment.NewLine, nIds));
+
+            // Ищем параметры в выражении
+            var paramMatches = Regex.Matches(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)?)([ПА]?)\}")
+    .Cast<Match>()
+    .Select(m => m.Value)
+    .Distinct()
+    .ToList();
 
             Console.WriteLine("paramMatches");
             Console.WriteLine(string.Join(Environment.NewLine, paramMatches));
 
-            if (paramMatches.Count != ids.Count)
+            if (paramMatches.Count != rawIds.Count)
             {
                 Console.WriteLine($"Incorrect amount: {arg.Name}");
                 continue;
             }
 
-            // Строим соответствие параметр -> id
-            Dictionary<string, int> paramToIdMap = new();
+            // Строим отображение параметра на ID с учетом позиции
+            Dictionary<string, (char Prefix, int Id)> paramToIdMap = new();
             for (int i = 0; i < paramMatches.Count; i++)
             {
-                paramToIdMap[paramMatches[i]] = ids[i];
+                string rawId = rawIds[i];
+                char prefix = rawId[0]; // 'А' или 'Н'
+                int id = int.Parse(rawId[1..]);
+                paramToIdMap[paramMatches[i]] = (prefix, id);
             }
 
-            // Загружаем значения vint из таблицы data101
-            var data = await db.Data101s
-            .Where(d => ids.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
-            .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+            // Загружаем данные из Data101
+            var data101 = await db.Data101s
+                .Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
+                .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+
+            // Загружаем данные из DataNor
+            var dataNor = await db.DataNors
+                .Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == info)
+                .ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
 
             // Подстановка значений в формулу
-            var parsedExpression = Regex.Replace(expression, @"\{(\d+)([ПА]?)\}", match =>
+            var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)?)([ПА]?)\}", match =>
             {
-                Console.WriteLine("parsedExpression");
-                var fullParam = match.Value;
-                if (paramToIdMap.TryGetValue(fullParam, out int id))
+                string param = match.Value;
+
+                if (paramToIdMap.TryGetValue(param, out var info))
                 {
-                    decimal val = data.TryGetValue(id, out decimal? nullableVal) ? nullableVal ?? 0 : 0;
+                    decimal val = 0;
+
+                    if (info.Prefix == 'А')
+                        val = data101.TryGetValue(info.Id, out var v1) ? v1 ?? 0 : 0;
+                    else if (info.Prefix == 'Н')
+                        val = dataNor.TryGetValue(info.Id, out var v2) ? v2 ?? 0 : 0;
+
                     return val.ToString("G", CultureInfo.InvariantCulture);
                 }
                 return "0";
