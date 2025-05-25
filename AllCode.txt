@@ -1,0 +1,3117 @@
+﻿namespace BlazorApp1.Components.Pages
+{
+    public partial class ArgPage
+    {
+    }
+}
+using MathNet.Symbolics;
+using Microsoft.AspNetCore.Components;
+
+namespace BlazorApp1.Components.Pages
+{
+	public partial class Calculate : ComponentBase
+	{
+
+
+		private string input = "";
+		private double result3 = 0;
+		private string display;
+        private string consist;
+
+
+        public string Input { get => input; set => input = value; }
+
+        public string Display
+        {
+            get => display;
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                {
+                    display = "";
+                    return;
+                }
+
+                char[] operators = ['+', '-', '*', '/', '%'];
+
+                string newValue = value.Trim();
+
+                int n = newValue.Length;
+
+                if (string.IsNullOrEmpty(display)){
+                    // оператор не может быть первым
+                    if (operators.Contains(newValue[0])) return;
+
+                    // точка не может быть первой
+                    if(newValue[0] == '.') return;
+
+                    // Если всё ок — присваиваем
+                    display = newValue;
+
+                }
+                else
+                {
+                    // не может быть два оператора подряд
+                    if (operators.Contains(display[^1]) && operators.Contains(newValue[^1]))
+                        return;
+
+                    // не может быть оператора после точки
+                    if (display.EndsWith(".") && operators.Contains(newValue[^1]))
+                        return;
+
+                    // точка не может быть после точки и оператора
+                    if ((newValue[^1] == '.') && (display.EndsWith(".") || operators.Contains(display[^1])))
+                        return;
+
+                    // после параметров может быть только оператор
+                    int lastOpenBrace = display.LastIndexOf('{');
+                    int lastCloseBrace = display.LastIndexOf('}');
+                    if (lastOpenBrace != -1 && lastCloseBrace > lastOpenBrace && lastCloseBrace == display.Length - 1)
+                    {
+                        // Параметр завершён, можно вводить только оператор
+                        if (!operators.Contains(newValue[^1]))
+                            return;
+                    }
+
+
+
+                    // Если всё ок — присваиваем
+                    display = newValue;
+
+
+                }
+
+/*
+                // Если первый символ — оператор, не устанавливаем
+                if (string.IsNullOrEmpty(display) && operators.Contains(newValue[0]))
+                    return;
+
+                // Запрещаем начинать с точки
+                if (string.IsNullOrEmpty(display) && newValue[0] == '.')
+                    return;
+
+                // Проверка на два оператора подряд
+                if (!string.IsNullOrEmpty(display) &&
+                    operators.Contains(display[^1]) &&
+                    operators.Contains(newValue[^1]))
+                    return;
+
+                // Запрещаем точку сразу после оператора или двойную точку
+                if (newValue[^1] == '.')
+                {
+                    if (display.EndsWith(".") || (!string.IsNullOrEmpty(display) && operators.Contains(display[^1])))
+                        return;
+                }
+                /*
+                // Запрещаем оператор сразу после точки
+                if (display.EndsWith(".") && operators.Contains(newValue[0]))
+                    return;
+*/
+                
+
+                // Запрещаем точку, если в числе она уже была
+
+                // Если всё ок — присваиваем
+               // display = newValue;
+
+            }
+        }
+
+        public string Consist { get => consist; set => consist = value; }
+
+
+        public void Calc(string expr, string con)
+        {
+
+        }
+
+
+        // метод расчета выражений
+        public void Calc2()
+		{
+			var expr = Infix.ParseOrThrow(Input);
+
+			// Создаем словарь значений переменных
+			var variables = new Dictionary<string, FloatingPoint> { { ("x"), 1 } };
+
+			// Вычисляем выражение с подстановкой значений
+			result3 = Evaluate.Evaluate(variables, expr).RealValue;
+
+			Console.WriteLine($"Result: {Display}");
+		}
+
+		// очистка полей
+		public void Clear()
+		{
+			Display = "";
+			result3 = 0;
+		}
+
+	}
+}
+using System;
+using System.Data;
+using Microsoft.AspNetCore.Components;
+
+
+namespace BlazorApp1.Components.Pages
+{
+	public partial class FormsData : ComponentBase
+	{	
+
+		// можно добавить фильтрацию-поиск по колонкам
+		// https://blazor.syncfusion.com/documentation/datagrid/filtering
+
+		private int regnum = 1000;
+		private string bankName;
+		//private DateTime onDate = DateTime.Today;
+		private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+		DataSet ds;
+		private bool isLoading = false;
+		private bool showNulls = false;
+		private bool ShowToast = false;
+		private string ToastMessage = "";
+
+		private int selectedForm = 135; // ID формы по умолчанию
+		private List<int> formNumber = new() { 123, 135, 101 }; // Пример списка форм
+
+		private CreditOrgInfoClient _creditService;
+
+		public int Regnum { get => regnum; set => regnum = value; }
+		public string BankName { get => bankName; set => bankName = value; }
+		public DateTime OnDate { get => onDate; set => onDate = value; }
+		public DataSet Ds { get => ds; set => ds = value; }
+		public bool IsLoading { get => isLoading; set => isLoading = value; }
+		public bool ShowNulls { get => showNulls; set => showNulls = value; }
+		public int SelectedForm { get => selectedForm; set => selectedForm = value; }
+		public List<int> FormNumber { get => formNumber; set => formNumber = value; }
+
+		[Inject]
+		public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
+		
+
+		private async Task LoadData2()
+		{
+
+			BankName = await CreditService.GetBankNameByRegnum(Regnum);
+			Console.WriteLine($"Name: {BankName}");
+
+		}
+
+		// загрузка данных в зависимости от выбранной формы, банка и даты
+		public async Task LoadData()
+		{
+
+			IsLoading = true; // Показываем "Загрузка данных..."
+			StateHasChanged(); // Принудительно обновляем UI
+			switch (SelectedForm)
+			{
+				case 123:
+					Ds = await CreditService.GetData123(Regnum, OnDate);
+					Console.WriteLine("form 123");
+					break;
+				case 135:
+					Ds = await CreditService.GetData135(Regnum, OnDate);
+					Console.WriteLine("form 135");
+					break;
+				case 101:
+					Ds = await CreditService.GetData101(Regnum, OnDate);
+					Console.WriteLine("form 101");
+					break;
+
+			}
+
+			IsLoading = false; // Данные загружены, скрываем "Загрузка данных..."
+			StateHasChanged(); // Обновляем UI снова
+
+		}
+
+		public async Task SaveData()
+		{
+
+			IsLoading = true; // Показываем "Загрузка данных..."
+			StateHasChanged(); // Принудительно обновляем UI
+			switch (SelectedForm)
+			{
+				case 123:
+					await CreditService.LoadData123(Regnum, OnDate);
+					ToastMessage = "Данные 123 формы загружены";
+					Console.WriteLine("load 123");
+					break;
+				case 135:
+					await CreditService.LoadData135(Regnum, OnDate);
+					ToastMessage = "Данные 135 формы загружены";
+					Console.WriteLine("load 135");
+					break;
+				case 101:
+					await CreditService.LoadData101(Regnum, OnDate);
+					ToastMessage = "Данные 101 формы загружены";
+					Console.WriteLine("load 101");
+					break;
+
+			}
+
+			IsLoading = false; // Данные загружены, скрываем "Загрузка данных..."
+			ShowToast = true;
+			StateHasChanged();
+
+			// Автоматически скрыть через 3 секунды
+			await Task.Delay(3000);
+			ShowToast = false;
+			
+			StateHasChanged(); // Обновляем UI снова
+
+		}
+
+		// проверить содержит ли строка null-значения
+		public bool ContainsNull(DataRow row)
+		{
+			return row.ItemArray.Any(item => item == DBNull.Value || item == null);
+		}
+	}
+}
+namespace BlazorApp1.Components.Pages
+{
+	public partial class FormsTemplate
+	{
+	}
+}
+using Microsoft.AspNetCore.Components;
+
+namespace BlazorApp1.Components.Pages
+{
+	public partial class MethodWork : ComponentBase
+	{
+		public void CreateMethods() { }
+
+	}
+}
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     Этот код создан программой.
+//
+//     Изменения в этом файле могут привести к неправильной работе и будут потеряны в случае
+//     повторного создания кода.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+namespace CregitInfoWS
+{
+    
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.ServiceModel.ServiceContractAttribute(Namespace="http://web.cbr.ru/", ConfigurationName="CregitInfoWS.CreditOrgInfoSoap")]
+    public interface CreditOrgInfoSoap
+    {
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/CreditInfoByIntCode", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> CreditInfoByIntCodeAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetAgency", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetAgencyAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetAgencyXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetAgencyXMLAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetFBU", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetFBUAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetFBUXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetFBUXMLAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetOffices", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetOfficesAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetOfficesByRegion", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetOfficesByRegionAsync(int RegCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetOfficesXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetOfficesXMLAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetOfficesByRegionXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetOfficesByRegionXMLAsync(int RegCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data134FormFullXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data134FormFullXMLAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Olap134Form", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Olap134FormAsync(string Code, int CredorgNumber, System.DateTime FromDate, System.DateTime ToDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data135FormFull", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data135FormFullAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data135MetaFullXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data135MetaFullXMLAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data135MetaFull", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data135MetaFullAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data135FormFullXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data135FormFullXMLAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data123FormFull", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data123FormFullAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data123FormFullXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data123FormFullXMLAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetDatesForF123", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF123Async(int CredprgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetDatesForF101", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF101Async(int CredprgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetDatesForF102", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF102Async(int CredprgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetDatesForF134", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF134Async(int CredprgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetDatesForF135", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF135Async(int CredprgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data134FormFull", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data134FormFullAsync(int CredorgNumber, System.DateTime OnDate);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetProfit97", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<string> GetProfit97Async(int nom);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetBalance97", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<string> GetBalance97Async(int nom);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetProfit98", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<string> GetProfit98Async(int regnum);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetBalance98", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<string> GetBalance98Async(int regnum);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetBalance", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetBalanceAsync(int regnum, int when, string show);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetAnnual", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnualAsync(int regnum, int when, string show);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetAnnual2015", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnual2015Async(int regnum, int when, string show);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetAnnual2016", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnual2016Async(int regnum, int when, string show);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetAnnual2017", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnual2017Async(int regnum, int when, string show);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF805Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF805DataAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF805Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF805XmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data802FXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data802FXMLAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data802F", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data802FAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data803FXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data803FXMLAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data803F", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data803FAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF806Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF806XmlAsync(int CredorgNumber, System.DateTime dateTime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF806Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF806DataAsync(int CredorgNumber, System.DateTime dateTime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF807Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF807XmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF807Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF807DataAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF808Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF808XmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF808Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF808DataAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF808BGXml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF808BGXmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF808BGData", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF808BGDataAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF810Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF810XmlAsync(int CredorgNumber, System.DateTime dateTime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF810Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF810DataAsync(int CredorgNumber, System.DateTime dateTime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF813Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF813DataAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF813Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813XmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF813MXml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813MXmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF813BGData", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF813BGDataAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF813BGXml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813BGXmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF813BGMXml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813BGMXmlAsync(int CredorgNumber, System.DateTime dateTime, int par);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF814Xml", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetF814XmlAsync(int CredorgNumber, System.DateTime dateTime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetF814Data", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF814DataAsync(int CredorgNumber, System.DateTime dateTime);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/EnumBIC_XML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> EnumBIC_XMLAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/BicToIntCode", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<double> BicToIntCodeAsync(string BicCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/BicToRegNumberStr", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<string> BicToRegNumberStrAsync(string BicCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/BicToRegNumber", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<int> BicToRegNumberAsync(string BicCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetFormsMaxDate", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime> GetFormsMaxDateAsync(int code);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/EnumRegions", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> EnumRegionsAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/EnumRegionsXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> EnumRegionsXMLAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/LastUpdate", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.DateTime> LastUpdateAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/EnumBIC", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> EnumBICAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FormExXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FormExXMLAsync(object[] CredorgNumbers, int IndID, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FormEx", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FormExAsync(object[] CredorgNumbers, int IndID, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullXMLAsync(int CredorgNumber, int IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FOldXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FOldXMLAsync(int when);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FOld", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FOldAsync(int when);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data134bFXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data134bFXMLAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data134bF", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data134bFAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data123bFXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data123bFXMLAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data123bF", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data123bFAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FNewXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FNewXMLAsync(int CredorgNumber, System.DateTime Dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FNew", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FNewAsync(int CredorgNumber, System.DateTime dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101Form", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FormAsync(int CredorgNumber, int IndID, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullExXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullExXMLAsync(object[] CredorgNumbers, int IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullEx", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullExAsync(object[] CredorgNumbers, int IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullExV2XML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullExV2XMLAsync(object[] CredorgNumbers, string IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullExV2", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullExV2Async(object[] CredorgNumbers, string IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101Full", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullAsync(int CredorgNumber, int IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullV2XML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullV2XMLAsync(int CredorgNumber, string IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data101FullV2", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullV2Async(int CredorgNumber, string IndCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/CreditInfoByRegCodeShort", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> CreditInfoByRegCodeShortAsync(int CredorgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/CreditInfoByRegCodeShortXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> CreditInfoByRegCodeShortXMLAsync(int CredorgNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102FormExXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FormExXMLAsync(object[] CredorgNumbers, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102FormEx", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FormExAsync(object[] CredorgNumbers, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102FXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FXMLAsync(int CredorgNumber, System.DateTime dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102F", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FAsync(int CredorgNumber, System.DateTime dt);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102FoldXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FoldXMLAsync(int when);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102Fold", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FoldAsync(int when);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102FormXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FormXMLAsync(int CredorgNumber, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Data102Form", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FormAsync(int CredorgNumber, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Form102IndicatorsEnumXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Form102IndicatorsEnumXMLAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Form102IndicatorsEnum", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Form102IndicatorsEnumAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Form101IndicatorsEnumXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> Form101IndicatorsEnumXMLAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/Form101IndicatorsEnum", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Form101IndicatorsEnumAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/RegNumToIntCode", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<double> RegNumToIntCodeAsync(double RegNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/IntCodeToRegNumStr", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<string> IntCodeToRegNumStrAsync(double IntNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/IntCodeToRegNum", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<double> IntCodeToRegNumAsync(double IntNumber);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/RegionsEnum", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> RegionsEnumAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/RegionsEnumXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> RegionsEnumXMLAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearcBranchesXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> SearcBranchesXMLAsync(string name, string rgn);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearcBranches", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearcBranchesAsync(string name, string rgn);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearchByRegionCode", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearchByRegionCodeAsync(int RegCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearchByRegionCodeXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> SearchByRegionCodeXMLAsync(int RegCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearchByNameXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> SearchByNameXMLAsync(string NamePart);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/EnumLicenses", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> EnumLicensesAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/EnumLicensesXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> EnumLicensesXMLAsync();
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearchByName", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearchByNameAsync(string NamePart);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearchByNameExXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> SearchByNameExXMLAsync(string NamePart, string rgn, string nsitype, string status, short[] license, bool fo, bool cards, bool fshare, bool jstock);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/SearchByNameEx", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearchByNameExAsync(string NamePart, string rgn, string nsitype, string status, short[] license, bool fo, bool cards, bool fshare, bool jstock);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/CreditInfoByIntCodeXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> CreditInfoByIntCodeXMLAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GeCardsXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GeCardsXMLAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GeCards", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GeCardsAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetSitesXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetSitesXMLAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetSites", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetSitesAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetSitesFullXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetSitesFullXMLAsync(string name, string url);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetSitesFull", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetSitesFullAsync(string name, string url);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/CreditInfoByIntCodeExXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> CreditInfoByIntCodeExXMLAsync(double[] InternalCodes);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/CreditInfoByIntCodeEx", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> CreditInfoByIntCodeExAsync(double[] InternalCodes);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetPeriodsOfDocuments", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetPeriodsOfDocumentsAsync(double InternalCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetBankrotsXML", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<System.Xml.XmlNode> GetBankrotsXMLAsync(double IntCode);
+        
+        [System.ServiceModel.OperationContractAttribute(Action="http://web.cbr.ru/GetBankrots", ReplyAction="*")]
+        [System.ServiceModel.XmlSerializerFormatAttribute(SupportFaults=true)]
+        [System.ServiceModel.ServiceKnownTypeAttribute(typeof(object[]))]
+        System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetBankrotsAsync(double InternalCode);
+    }
+    
+    /// <remarks/>
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.Xml.Serialization.XmlTypeAttribute(Namespace="http://web.cbr.ru/")]
+    public partial class ResBalance
+    {
+        
+        private string titleField;
+        
+        private string hTMLField;
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=0)]
+        public string Title
+        {
+            get
+            {
+                return this.titleField;
+            }
+            set
+            {
+                this.titleField = value;
+            }
+        }
+        
+        /// <remarks/>
+        [System.Xml.Serialization.XmlElementAttribute(Order=1)]
+        public string HTML
+        {
+            get
+            {
+                return this.hTMLField;
+            }
+            set
+            {
+                this.hTMLField = value;
+            }
+        }
+    }
+    
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    public interface CreditOrgInfoSoapChannel : CregitInfoWS.CreditOrgInfoSoap, System.ServiceModel.IClientChannel
+    {
+    }
+    
+    [System.Diagnostics.DebuggerStepThroughAttribute()]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.Tools.ServiceModel.Svcutil", "2.2.0-preview1.23462.5")]
+    public partial class CreditOrgInfoSoapClient : System.ServiceModel.ClientBase<CregitInfoWS.CreditOrgInfoSoap>, CregitInfoWS.CreditOrgInfoSoap
+    {
+        
+        /// <summary>
+        /// Реализуйте этот разделяемый метод для настройки конечной точки службы.
+        /// </summary>
+        /// <param name="serviceEndpoint">Настраиваемая конечная точка</param>
+        /// <param name="clientCredentials">Учетные данные клиента.</param>
+        static partial void ConfigureEndpoint(System.ServiceModel.Description.ServiceEndpoint serviceEndpoint, System.ServiceModel.Description.ClientCredentials clientCredentials);
+        
+        public CreditOrgInfoSoapClient(EndpointConfiguration endpointConfiguration) : 
+                base(CreditOrgInfoSoapClient.GetBindingForEndpoint(endpointConfiguration), CreditOrgInfoSoapClient.GetEndpointAddress(endpointConfiguration))
+        {
+            this.Endpoint.Name = endpointConfiguration.ToString();
+            ConfigureEndpoint(this.Endpoint, this.ClientCredentials);
+        }
+        
+        public CreditOrgInfoSoapClient(EndpointConfiguration endpointConfiguration, string remoteAddress) : 
+                base(CreditOrgInfoSoapClient.GetBindingForEndpoint(endpointConfiguration), new System.ServiceModel.EndpointAddress(remoteAddress))
+        {
+            this.Endpoint.Name = endpointConfiguration.ToString();
+            ConfigureEndpoint(this.Endpoint, this.ClientCredentials);
+        }
+        
+        public CreditOrgInfoSoapClient(EndpointConfiguration endpointConfiguration, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(CreditOrgInfoSoapClient.GetBindingForEndpoint(endpointConfiguration), remoteAddress)
+        {
+            this.Endpoint.Name = endpointConfiguration.ToString();
+            ConfigureEndpoint(this.Endpoint, this.ClientCredentials);
+        }
+        
+        public CreditOrgInfoSoapClient(System.ServiceModel.Channels.Binding binding, System.ServiceModel.EndpointAddress remoteAddress) : 
+                base(binding, remoteAddress)
+        {
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> CreditInfoByIntCodeAsync(double InternalCode)
+        {
+            return base.Channel.CreditInfoByIntCodeAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetAgencyAsync(double IntCode)
+        {
+            return base.Channel.GetAgencyAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetAgencyXMLAsync(double IntCode)
+        {
+            return base.Channel.GetAgencyXMLAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetFBUAsync(double IntCode)
+        {
+            return base.Channel.GetFBUAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetFBUXMLAsync(double IntCode)
+        {
+            return base.Channel.GetFBUXMLAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetOfficesAsync(double IntCode)
+        {
+            return base.Channel.GetOfficesAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetOfficesByRegionAsync(int RegCode)
+        {
+            return base.Channel.GetOfficesByRegionAsync(RegCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetOfficesXMLAsync(double IntCode)
+        {
+            return base.Channel.GetOfficesXMLAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetOfficesByRegionXMLAsync(int RegCode)
+        {
+            return base.Channel.GetOfficesByRegionXMLAsync(RegCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data134FormFullXMLAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data134FormFullXMLAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Olap134FormAsync(string Code, int CredorgNumber, System.DateTime FromDate, System.DateTime ToDate)
+        {
+            return base.Channel.Olap134FormAsync(Code, CredorgNumber, FromDate, ToDate);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data135FormFullAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data135FormFullAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data135MetaFullXMLAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data135MetaFullXMLAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data135MetaFullAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data135MetaFullAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data135FormFullXMLAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data135FormFullXMLAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data123FormFullAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data123FormFullAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data123FormFullXMLAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data123FormFullXMLAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF123Async(int CredprgNumber)
+        {
+            return base.Channel.GetDatesForF123Async(CredprgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF101Async(int CredprgNumber)
+        {
+            return base.Channel.GetDatesForF101Async(CredprgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF102Async(int CredprgNumber)
+        {
+            return base.Channel.GetDatesForF102Async(CredprgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF134Async(int CredprgNumber)
+        {
+            return base.Channel.GetDatesForF134Async(CredprgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime[]> GetDatesForF135Async(int CredprgNumber)
+        {
+            return base.Channel.GetDatesForF135Async(CredprgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data134FormFullAsync(int CredorgNumber, System.DateTime OnDate)
+        {
+            return base.Channel.Data134FormFullAsync(CredorgNumber, OnDate);
+        }
+        
+        public System.Threading.Tasks.Task<string> GetProfit97Async(int nom)
+        {
+            return base.Channel.GetProfit97Async(nom);
+        }
+        
+        public System.Threading.Tasks.Task<string> GetBalance97Async(int nom)
+        {
+            return base.Channel.GetBalance97Async(nom);
+        }
+        
+        public System.Threading.Tasks.Task<string> GetProfit98Async(int regnum)
+        {
+            return base.Channel.GetProfit98Async(regnum);
+        }
+        
+        public System.Threading.Tasks.Task<string> GetBalance98Async(int regnum)
+        {
+            return base.Channel.GetBalance98Async(regnum);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetBalanceAsync(int regnum, int when, string show)
+        {
+            return base.Channel.GetBalanceAsync(regnum, when, show);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnualAsync(int regnum, int when, string show)
+        {
+            return base.Channel.GetAnnualAsync(regnum, when, show);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnual2015Async(int regnum, int when, string show)
+        {
+            return base.Channel.GetAnnual2015Async(regnum, when, show);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnual2016Async(int regnum, int when, string show)
+        {
+            return base.Channel.GetAnnual2016Async(regnum, when, show);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ResBalance> GetAnnual2017Async(int regnum, int when, string show)
+        {
+            return base.Channel.GetAnnual2017Async(regnum, when, show);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF805DataAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF805DataAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF805XmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF805XmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data802FXMLAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data802FXMLAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data802FAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data802FAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data803FXMLAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data803FXMLAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data803FAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data803FAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF806XmlAsync(int CredorgNumber, System.DateTime dateTime)
+        {
+            return base.Channel.GetF806XmlAsync(CredorgNumber, dateTime);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF806DataAsync(int CredorgNumber, System.DateTime dateTime)
+        {
+            return base.Channel.GetF806DataAsync(CredorgNumber, dateTime);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF807XmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF807XmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF807DataAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF807DataAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF808XmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF808XmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF808DataAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF808DataAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF808BGXmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF808BGXmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF808BGDataAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF808BGDataAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF810XmlAsync(int CredorgNumber, System.DateTime dateTime)
+        {
+            return base.Channel.GetF810XmlAsync(CredorgNumber, dateTime);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF810DataAsync(int CredorgNumber, System.DateTime dateTime)
+        {
+            return base.Channel.GetF810DataAsync(CredorgNumber, dateTime);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF813DataAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF813DataAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813XmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF813XmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813MXmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF813MXmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF813BGDataAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF813BGDataAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813BGXmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF813BGXmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF813BGMXmlAsync(int CredorgNumber, System.DateTime dateTime, int par)
+        {
+            return base.Channel.GetF813BGMXmlAsync(CredorgNumber, dateTime, par);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetF814XmlAsync(int CredorgNumber, System.DateTime dateTime)
+        {
+            return base.Channel.GetF814XmlAsync(CredorgNumber, dateTime);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetF814DataAsync(int CredorgNumber, System.DateTime dateTime)
+        {
+            return base.Channel.GetF814DataAsync(CredorgNumber, dateTime);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> EnumBIC_XMLAsync()
+        {
+            return base.Channel.EnumBIC_XMLAsync();
+        }
+        
+        public System.Threading.Tasks.Task<double> BicToIntCodeAsync(string BicCode)
+        {
+            return base.Channel.BicToIntCodeAsync(BicCode);
+        }
+        
+        public System.Threading.Tasks.Task<string> BicToRegNumberStrAsync(string BicCode)
+        {
+            return base.Channel.BicToRegNumberStrAsync(BicCode);
+        }
+        
+        public System.Threading.Tasks.Task<int> BicToRegNumberAsync(string BicCode)
+        {
+            return base.Channel.BicToRegNumberAsync(BicCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime> GetFormsMaxDateAsync(int code)
+        {
+            return base.Channel.GetFormsMaxDateAsync(code);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> EnumRegionsAsync()
+        {
+            return base.Channel.EnumRegionsAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> EnumRegionsXMLAsync()
+        {
+            return base.Channel.EnumRegionsXMLAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.DateTime> LastUpdateAsync()
+        {
+            return base.Channel.LastUpdateAsync();
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> EnumBICAsync()
+        {
+            return base.Channel.EnumBICAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FormExXMLAsync(object[] CredorgNumbers, int IndID, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FormExXMLAsync(CredorgNumbers, IndID, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FormExAsync(object[] CredorgNumbers, int IndID, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FormExAsync(CredorgNumbers, IndID, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullXMLAsync(int CredorgNumber, int IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullXMLAsync(CredorgNumber, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FOldXMLAsync(int when)
+        {
+            return base.Channel.Data101FOldXMLAsync(when);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FOldAsync(int when)
+        {
+            return base.Channel.Data101FOldAsync(when);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data134bFXMLAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data134bFXMLAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data134bFAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data134bFAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data123bFXMLAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data123bFXMLAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data123bFAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data123bFAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FNewXMLAsync(int CredorgNumber, System.DateTime Dt)
+        {
+            return base.Channel.Data101FNewXMLAsync(CredorgNumber, Dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FNewAsync(int CredorgNumber, System.DateTime dt)
+        {
+            return base.Channel.Data101FNewAsync(CredorgNumber, dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FormAsync(int CredorgNumber, int IndID, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FormAsync(CredorgNumber, IndID, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullExXMLAsync(object[] CredorgNumbers, int IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullExXMLAsync(CredorgNumbers, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullExAsync(object[] CredorgNumbers, int IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullExAsync(CredorgNumbers, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullExV2XMLAsync(object[] CredorgNumbers, string IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullExV2XMLAsync(CredorgNumbers, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullExV2Async(object[] CredorgNumbers, string IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullExV2Async(CredorgNumbers, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullAsync(int CredorgNumber, int IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullAsync(CredorgNumber, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data101FullV2XMLAsync(int CredorgNumber, string IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullV2XMLAsync(CredorgNumber, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data101FullV2Async(int CredorgNumber, string IndCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data101FullV2Async(CredorgNumber, IndCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> CreditInfoByRegCodeShortAsync(int CredorgNumber)
+        {
+            return base.Channel.CreditInfoByRegCodeShortAsync(CredorgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> CreditInfoByRegCodeShortXMLAsync(int CredorgNumber)
+        {
+            return base.Channel.CreditInfoByRegCodeShortXMLAsync(CredorgNumber);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FormExXMLAsync(object[] CredorgNumbers, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data102FormExXMLAsync(CredorgNumbers, SymbCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FormExAsync(object[] CredorgNumbers, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data102FormExAsync(CredorgNumbers, SymbCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FXMLAsync(int CredorgNumber, System.DateTime dt)
+        {
+            return base.Channel.Data102FXMLAsync(CredorgNumber, dt);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FAsync(int CredorgNumber, System.DateTime dt)
+        {
+            return base.Channel.Data102FAsync(CredorgNumber, dt);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FoldXMLAsync(int when)
+        {
+            return base.Channel.Data102FoldXMLAsync(when);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FoldAsync(int when)
+        {
+            return base.Channel.Data102FoldAsync(when);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Data102FormXMLAsync(int CredorgNumber, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data102FormXMLAsync(CredorgNumber, SymbCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Data102FormAsync(int CredorgNumber, int SymbCode, System.DateTime DateFrom, System.DateTime DateTo)
+        {
+            return base.Channel.Data102FormAsync(CredorgNumber, SymbCode, DateFrom, DateTo);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Form102IndicatorsEnumXMLAsync()
+        {
+            return base.Channel.Form102IndicatorsEnumXMLAsync();
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Form102IndicatorsEnumAsync()
+        {
+            return base.Channel.Form102IndicatorsEnumAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> Form101IndicatorsEnumXMLAsync()
+        {
+            return base.Channel.Form101IndicatorsEnumXMLAsync();
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> Form101IndicatorsEnumAsync()
+        {
+            return base.Channel.Form101IndicatorsEnumAsync();
+        }
+        
+        public System.Threading.Tasks.Task<double> RegNumToIntCodeAsync(double RegNumber)
+        {
+            return base.Channel.RegNumToIntCodeAsync(RegNumber);
+        }
+        
+        public System.Threading.Tasks.Task<string> IntCodeToRegNumStrAsync(double IntNumber)
+        {
+            return base.Channel.IntCodeToRegNumStrAsync(IntNumber);
+        }
+        
+        public System.Threading.Tasks.Task<double> IntCodeToRegNumAsync(double IntNumber)
+        {
+            return base.Channel.IntCodeToRegNumAsync(IntNumber);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> RegionsEnumAsync()
+        {
+            return base.Channel.RegionsEnumAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> RegionsEnumXMLAsync()
+        {
+            return base.Channel.RegionsEnumXMLAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> SearcBranchesXMLAsync(string name, string rgn)
+        {
+            return base.Channel.SearcBranchesXMLAsync(name, rgn);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearcBranchesAsync(string name, string rgn)
+        {
+            return base.Channel.SearcBranchesAsync(name, rgn);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearchByRegionCodeAsync(int RegCode)
+        {
+            return base.Channel.SearchByRegionCodeAsync(RegCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> SearchByRegionCodeXMLAsync(int RegCode)
+        {
+            return base.Channel.SearchByRegionCodeXMLAsync(RegCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> SearchByNameXMLAsync(string NamePart)
+        {
+            return base.Channel.SearchByNameXMLAsync(NamePart);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> EnumLicensesAsync()
+        {
+            return base.Channel.EnumLicensesAsync();
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> EnumLicensesXMLAsync()
+        {
+            return base.Channel.EnumLicensesXMLAsync();
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearchByNameAsync(string NamePart)
+        {
+            return base.Channel.SearchByNameAsync(NamePart);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> SearchByNameExXMLAsync(string NamePart, string rgn, string nsitype, string status, short[] license, bool fo, bool cards, bool fshare, bool jstock)
+        {
+            return base.Channel.SearchByNameExXMLAsync(NamePart, rgn, nsitype, status, license, fo, cards, fshare, jstock);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> SearchByNameExAsync(string NamePart, string rgn, string nsitype, string status, short[] license, bool fo, bool cards, bool fshare, bool jstock)
+        {
+            return base.Channel.SearchByNameExAsync(NamePart, rgn, nsitype, status, license, fo, cards, fshare, jstock);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> CreditInfoByIntCodeXMLAsync(double InternalCode)
+        {
+            return base.Channel.CreditInfoByIntCodeXMLAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GeCardsXMLAsync(double InternalCode)
+        {
+            return base.Channel.GeCardsXMLAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GeCardsAsync(double InternalCode)
+        {
+            return base.Channel.GeCardsAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetSitesXMLAsync(double InternalCode)
+        {
+            return base.Channel.GetSitesXMLAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetSitesAsync(double InternalCode)
+        {
+            return base.Channel.GetSitesAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetSitesFullXMLAsync(string name, string url)
+        {
+            return base.Channel.GetSitesFullXMLAsync(name, url);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetSitesFullAsync(string name, string url)
+        {
+            return base.Channel.GetSitesFullAsync(name, url);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> CreditInfoByIntCodeExXMLAsync(double[] InternalCodes)
+        {
+            return base.Channel.CreditInfoByIntCodeExXMLAsync(InternalCodes);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> CreditInfoByIntCodeExAsync(double[] InternalCodes)
+        {
+            return base.Channel.CreditInfoByIntCodeExAsync(InternalCodes);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetPeriodsOfDocumentsAsync(double InternalCode)
+        {
+            return base.Channel.GetPeriodsOfDocumentsAsync(InternalCode);
+        }
+        
+        public System.Threading.Tasks.Task<System.Xml.XmlNode> GetBankrotsXMLAsync(double IntCode)
+        {
+            return base.Channel.GetBankrotsXMLAsync(IntCode);
+        }
+        
+        public System.Threading.Tasks.Task<CregitInfoWS.ArrayOfXElement> GetBankrotsAsync(double InternalCode)
+        {
+            return base.Channel.GetBankrotsAsync(InternalCode);
+        }
+        
+        public virtual System.Threading.Tasks.Task OpenAsync()
+        {
+            return System.Threading.Tasks.Task.Factory.FromAsync(((System.ServiceModel.ICommunicationObject)(this)).BeginOpen(null, null), new System.Action<System.IAsyncResult>(((System.ServiceModel.ICommunicationObject)(this)).EndOpen));
+        }
+        
+        private static System.ServiceModel.Channels.Binding GetBindingForEndpoint(EndpointConfiguration endpointConfiguration)
+        {
+            if ((endpointConfiguration == EndpointConfiguration.CreditOrgInfoSoap))
+            {
+                System.ServiceModel.BasicHttpBinding result = new System.ServiceModel.BasicHttpBinding();
+                result.MaxBufferSize = int.MaxValue;
+                result.ReaderQuotas = System.Xml.XmlDictionaryReaderQuotas.Max;
+                result.MaxReceivedMessageSize = int.MaxValue;
+                result.AllowCookies = true;
+                return result;
+            }
+            if ((endpointConfiguration == EndpointConfiguration.CreditOrgInfoSoap12))
+            {
+                System.ServiceModel.Channels.CustomBinding result = new System.ServiceModel.Channels.CustomBinding();
+                System.ServiceModel.Channels.TextMessageEncodingBindingElement textBindingElement = new System.ServiceModel.Channels.TextMessageEncodingBindingElement();
+                textBindingElement.MessageVersion = System.ServiceModel.Channels.MessageVersion.CreateVersion(System.ServiceModel.EnvelopeVersion.Soap12, System.ServiceModel.Channels.AddressingVersion.None);
+                result.Elements.Add(textBindingElement);
+                System.ServiceModel.Channels.HttpTransportBindingElement httpBindingElement = new System.ServiceModel.Channels.HttpTransportBindingElement();
+                httpBindingElement.AllowCookies = true;
+                httpBindingElement.MaxBufferSize = int.MaxValue;
+                httpBindingElement.MaxReceivedMessageSize = int.MaxValue;
+                result.Elements.Add(httpBindingElement);
+                return result;
+            }
+            throw new System.InvalidOperationException(string.Format("Не удалось найти конечную точку с именем \"{0}\".", endpointConfiguration));
+        }
+        
+        private static System.ServiceModel.EndpointAddress GetEndpointAddress(EndpointConfiguration endpointConfiguration)
+        {
+            if ((endpointConfiguration == EndpointConfiguration.CreditOrgInfoSoap))
+            {
+                return new System.ServiceModel.EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
+            }
+            if ((endpointConfiguration == EndpointConfiguration.CreditOrgInfoSoap12))
+            {
+                return new System.ServiceModel.EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
+            }
+            throw new System.InvalidOperationException(string.Format("Не удалось найти конечную точку с именем \"{0}\".", endpointConfiguration));
+        }
+        
+        public enum EndpointConfiguration
+        {
+            
+            CreditOrgInfoSoap,
+            
+            CreditOrgInfoSoap12,
+        }
+    }
+    
+    [System.Xml.Serialization.XmlSchemaProviderAttribute(null, IsAny=true)]
+    [System.CodeDom.Compiler.GeneratedCodeAttribute("dotnet-svcutil-lib", "2.2.0.0")]
+    public partial class ArrayOfXElement : object, System.Xml.Serialization.IXmlSerializable
+    {
+        
+        private System.Collections.Generic.List<System.Xml.Linq.XElement> nodesList = new System.Collections.Generic.List<System.Xml.Linq.XElement>();
+        
+        public ArrayOfXElement()
+        {
+        }
+        
+        public virtual System.Collections.Generic.List<System.Xml.Linq.XElement> Nodes
+        {
+            get
+            {
+                return this.nodesList;
+            }
+        }
+        
+        public virtual System.Xml.Schema.XmlSchema GetSchema()
+        {
+            throw new System.NotImplementedException();
+        }
+        
+        public virtual void WriteXml(System.Xml.XmlWriter writer)
+        {
+            System.Collections.Generic.IEnumerator<System.Xml.Linq.XElement> e = nodesList.GetEnumerator();
+            for (
+            ; e.MoveNext(); 
+            )
+            {
+                ((System.Xml.Serialization.IXmlSerializable)(e.Current)).WriteXml(writer);
+            }
+        }
+        
+        public virtual void ReadXml(System.Xml.XmlReader reader)
+        {
+            for (
+            ; (reader.NodeType != System.Xml.XmlNodeType.EndElement); 
+            )
+            {
+                if ((reader.NodeType == System.Xml.XmlNodeType.Element))
+                {
+                    System.Xml.Linq.XElement elem = new System.Xml.Linq.XElement("default");
+                    ((System.Xml.Serialization.IXmlSerializable)(elem)).ReadXml(reader);
+                    Nodes.Add(elem);
+                }
+                else
+                {
+                    reader.Skip();
+                }
+            }
+        }
+    }
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит состав показателей методик
+/// </summary>
+public partial class ArgConsist
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int IdArgConsist { get; set; }
+
+    /// <summary>
+    /// Id показателя
+    /// </summary>
+    public int? IdArg { get; set; }
+
+    /// <summary>
+    /// Id строки из 101 формы (БС2)
+    /// </summary>
+    public int? IdT101 { get; set; }
+
+    /// <summary>
+    /// Id строки из 123/135 форм (код норматива)
+    /// </summary>
+    public int? IdTnor { get; set; }
+
+    public virtual Argument? IdArgNavigation { get; set; }
+
+    public virtual Templates101? IdT101Navigation { get; set; }
+
+    public virtual TemplatesNor? IdTnorNavigation { get; set; }
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит список показателей, входящих в методики
+/// </summary>
+public partial class Argument
+{
+    /// <summary>
+    /// Id показателя
+    /// </summary>
+    public int IdArg { get; set; }
+
+    /// <summary>
+    /// Название показателя
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Краткий код, короткое название показателя
+    /// </summary>
+    public string ShortName { get; set; } = null!;
+
+    /// <summary>
+    /// Описание показателя, принцип расчета, на основе чего строится
+    /// </summary>
+    public string? Descr { get; set; }
+
+    /// <summary>
+    /// Формула для расчета показателя
+    /// </summary>
+    public string? Expression { get; set; }
+
+    /// <summary>
+    /// Из каких параметров отчетных форм состоит
+    /// </summary>
+    public string? Consist { get; set; }
+
+    /// <summary>
+    /// Id методики, в которую включен показатель
+    /// </summary>
+    public int? IdMethods { get; set; }
+
+    public virtual ICollection<ArgConsist> ArgConsists { get; set; } = new List<ArgConsist>();
+
+    public virtual Method? IdMethodsNavigation { get; set; }
+
+    public virtual ICollection<MethodsResult> MethodsResults { get; set; } = new List<MethodsResult>();
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит список банков и их регистрационные номера
+/// </summary>
+public partial class Bank
+{
+    /// <summary>
+    /// Регистрационный номер банка
+    /// </summary>
+    public int Regnum { get; set; }
+
+    /// <summary>
+    /// Наименование банка
+    /// </summary>
+    public string Name { get; set; } = null!;
+
+    public virtual ICollection<FormInfo> FormInfos { get; set; } = new List<FormInfo>();
+}
+using System;
+using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore;
+
+namespace BlazorApp1.Models;
+
+// класс контекста для работы с базой через Entity Framework
+// управляет подключением к БД
+public partial class BanksContext : DbContext
+{
+    // конструктор без параметров
+    public BanksContext()
+    {
+    }
+
+    // конструктор с настройками подключения БД
+    public BanksContext(DbContextOptions<BanksContext> options)
+        : base(options)
+    {
+    }
+
+	// DbSet - коллекции, которые представляют таблицы в БД
+	public virtual DbSet<ArgConsist> ArgConsists { get; set; }
+
+    public virtual DbSet<Argument> Arguments { get; set; }
+
+    public virtual DbSet<Bank> Banks { get; set; }
+
+    public virtual DbSet<Data101> Data101s { get; set; }
+
+    public virtual DbSet<DataNor> DataNors { get; set; }
+
+    public virtual DbSet<FormInfo> FormInfos { get; set; }
+
+    public virtual DbSet<Method> Methods { get; set; }
+
+    public virtual DbSet<MethodsResult> MethodsResults { get; set; }
+
+    public virtual DbSet<Templates101> Templates101s { get; set; }
+
+    public virtual DbSet<TemplatesNor> TemplatesNors { get; set; }
+
+
+   /* protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseNpgsql("Host=localhost;Database=banks;Username=admin;Password=password");
+   */
+
+
+    // метод для связывания таблиц и свойств моделей
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<ArgConsist>(entity =>
+        {
+			// HasKey - первичный ключ
+			entity.HasKey(e => e.IdArgConsist).HasName("arg_consist_pkey");
+
+            // связывание таблицы с сущностью
+			entity.ToTable("arg_consist", tb => tb.HasComment("Таблица содержит состав показателей методик"));
+
+
+            entity.Property(e => e.IdArgConsist)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_arg_consist"); // задание имени колонки в БД
+            entity.Property(e => e.IdArg)
+                .HasComment("Id показателя")
+                .HasColumnName("id_arg");
+            entity.Property(e => e.IdT101)
+                .HasComment("Id строки из 101 формы (БС2)")
+                .HasColumnName("id_t101");
+            entity.Property(e => e.IdTnor)
+                .HasComment("Id строки из 123/135 форм (код норматива)")
+                .HasColumnName("id_tnor");
+
+            // создание внешнего ключа
+            entity.HasOne(d => d.IdArgNavigation).WithMany(p => p.ArgConsists) // указание типа связи
+                .HasForeignKey(d => d.IdArg) // указание внешнего ключа
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("arg_consist_id_arg_fkey"); // имя ограничения в таблице
+
+			entity.HasOne(d => d.IdT101Navigation).WithMany(p => p.ArgConsists)
+                .HasForeignKey(d => d.IdT101)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("arg_consist_id_t101_fkey"); 
+
+            entity.HasOne(d => d.IdTnorNavigation).WithMany(p => p.ArgConsists)
+                .HasForeignKey(d => d.IdTnor)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("arg_consist_id_tnor_fkey");
+        });
+
+        modelBuilder.Entity<Argument>(entity =>
+        {
+            entity.HasKey(e => e.IdArg).HasName("arguments_pkey");
+
+            entity.ToTable("arguments", tb => tb.HasComment("Таблица содержит список показателей, входящих в методики"));
+
+            entity.Property(e => e.IdArg)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id показателя")
+                .HasColumnName("id_arg");
+            entity.Property(e => e.Consist)
+                .HasComment("Из каких параметров отчетных форм состоит")
+                .HasColumnName("consist");
+            entity.Property(e => e.Descr)
+                .HasComment("Описание показателя, принцип расчета, на основе чего строится")
+                .HasColumnName("descr");
+            entity.Property(e => e.Expression)
+                .HasComment("Формула для расчета показателя")
+                .HasColumnName("expression");
+            entity.Property(e => e.IdMethods)
+                .HasComment("Id методики, в которую включен показатель")
+                .HasColumnName("id_methods");
+            entity.Property(e => e.Name)
+                .HasComment("Название показателя")
+                .HasColumnName("name");
+            entity.Property(e => e.ShortName)
+                .HasComment("Краткий код, короткое название показателя")
+                .HasColumnName("short_name");
+
+            entity.HasOne(d => d.IdMethodsNavigation).WithMany(p => p.Arguments)
+                .HasForeignKey(d => d.IdMethods)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("arguments_id_methods_fkey");
+        });
+
+        modelBuilder.Entity<Bank>(entity =>
+        {
+            entity.HasKey(e => e.Regnum).HasName("banks_pkey");
+
+			entity.ToTable("banks", tb => tb.HasComment("Таблица содержит список банков и их регистрационные номера"));
+
+            entity.Property(e => e.Regnum)
+                .ValueGeneratedNever()
+                .HasComment("Регистрационный номер банка")
+                .HasColumnName("regnum");
+            entity.Property(e => e.Name)
+                .HasComment("Наименование банка")
+                .HasColumnName("name");
+        });
+
+        modelBuilder.Entity<Data101>(entity =>
+        {
+            entity.HasKey(e => e.Id101).HasName("data101_pkey");
+
+            entity.ToTable("data101", tb => tb.HasComment("Таблица содержит данные 101 формы для банка на дату"));
+
+            entity.Property(e => e.Id101)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_101");
+            entity.Property(e => e.IdInfo)
+                .HasComment("Id шапки, т.е., для какого банка и на какую дату")
+                .HasColumnName("id_info");
+            entity.Property(e => e.IdT101)
+                .HasComment("Id строки из 101 формы (БС2)")
+                .HasColumnName("id_t101");
+            entity.Property(e => e.Iitg)
+                .HasPrecision(33)
+                .HasComment("Исходящие остатки итого, тыс. руб")
+                .HasColumnName("iitg");
+            entity.Property(e => e.Vint)
+                .HasPrecision(33)
+                .HasComment("Входящие остатки итого, тыс. руб")
+                .HasColumnName("vint");
+
+            entity.HasOne(d => d.IdInfoNavigation).WithMany(p => p.Data101s)
+                .HasForeignKey(d => d.IdInfo)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("data101_id_info_fkey");
+
+            entity.HasOne(d => d.IdT101Navigation).WithMany(p => p.Data101s)
+                .HasForeignKey(d => d.IdT101)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("data101_id_t101_fkey");
+        });
+
+        modelBuilder.Entity<DataNor>(entity =>
+        {
+            entity.HasKey(e => e.IdNor).HasName("data_nor_pkey");
+
+            entity.ToTable("data_nor", tb => tb.HasComment("Таблица содержит данные 123/135 форм для банка на дату"));
+
+            entity.Property(e => e.IdNor)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_nor");
+            entity.Property(e => e.IdInfo)
+                .HasComment("Id шапки, т.е., для какого банка и на какую дату")
+                .HasColumnName("id_info");
+            entity.Property(e => e.IdTnor)
+                .HasComment("Id строки из 123/135 форм (код норматива)")
+                .HasColumnName("id_tnor");
+            entity.Property(e => e.Val)
+                .HasPrecision(19)
+                .HasComment("Значение норматива")
+                .HasColumnName("val");
+
+            entity.HasOne(d => d.IdInfoNavigation).WithMany(p => p.DataNors)
+                .HasForeignKey(d => d.IdInfo)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("data_nor_id_info_fkey");
+
+            entity.HasOne(d => d.IdTnorNavigation).WithMany(p => p.DataNors)
+                .HasForeignKey(d => d.IdTnor)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("data_nor_id_tnor_fkey");
+        });
+
+        modelBuilder.Entity<FormInfo>(entity =>
+        {
+            entity.HasKey(e => e.IdInfo).HasName("form_info_pkey");
+
+            entity.ToTable("form_info", tb => tb.HasComment("Таблица содержит шапку данных форм"));
+
+            entity.Property(e => e.IdInfo)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_info");
+            entity.Property(e => e.Dt)
+                .HasComment("Дата, на которую расчитывается форма")
+                .HasColumnName("dt");
+            entity.Property(e => e.Regnum)
+                .HasComment("Рег. номер банка, для которого расчитывается форма")
+                .HasColumnName("regnum");
+
+            entity.HasOne(d => d.RegnumNavigation).WithMany(p => p.FormInfos)
+                .HasForeignKey(d => d.Regnum)
+                .HasConstraintName("form_info_regnum_fkey");
+        });
+
+        modelBuilder.Entity<Method>(entity =>
+        {
+            entity.HasKey(e => e.IdMethods).HasName("methods_pkey");
+
+            entity.ToTable("methods", tb => tb.HasComment("Таблица содержит список методик"));
+
+			entity.Property(e => e.IdMethods)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id методики")
+                .HasColumnName("id_methods");
+            entity.Property(e => e.Descr)
+                .HasComment("Описание методики, ее история, основные принципы")
+                .HasColumnName("descr");
+            entity.Property(e => e.Name)
+                .HasComment("Наименование методики")
+                .HasColumnName("name");
+        });
+
+        modelBuilder.Entity<MethodsResult>(entity =>
+        {
+            entity.HasKey(e => e.IdRes).HasName("methods_result_pkey");
+
+            entity.ToTable("methods_result", tb => tb.HasComment("Таблица содержит расчитанные показатели по методикам для банка на дату"));
+
+            entity.Property(e => e.IdRes)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_res");
+            entity.Property(e => e.IdArg)
+                .HasComment("Id показателя")
+                .HasColumnName("id_arg");
+            entity.Property(e => e.IdInfo)
+                .HasComment("Id шапки, т.е., для какого банка и на какую дату")
+                .HasColumnName("id_info");
+            entity.Property(e => e.Val)
+                .HasPrecision(19)
+                .HasComment("Значение показателя")
+                .HasColumnName("val");
+
+            entity.HasOne(d => d.IdArgNavigation).WithMany(p => p.MethodsResults)
+                .HasForeignKey(d => d.IdArg)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("methods_result_id_arg_fkey");
+
+            entity.HasOne(d => d.IdInfoNavigation).WithMany(p => p.MethodsResults)
+                .HasForeignKey(d => d.IdInfo)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("methods_result_id_info_fkey");
+        });
+
+        modelBuilder.Entity<Templates101>(entity =>
+        {
+            entity.HasKey(e => e.IdT101).HasName("templates_101_pkey");
+
+            entity.ToTable("templates_101", tb => tb.HasComment("Таблица содержит струкутру 101 формы"));
+
+            entity.Property(e => e.IdT101)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_t101");
+            entity.Property(e => e.AP)
+                .HasMaxLength(1)
+                .HasComment("Признак счета (А/П)")
+                .HasColumnName("a_p");
+            entity.Property(e => e.Name)
+                .HasComment("Наименование БС2")
+                .HasColumnName("name");
+            entity.Property(e => e.NumSc)
+                .HasMaxLength(5)
+                .IsFixedLength()
+                .HasComment("Номер счета 1-го, 2-го порядка или суммы БС2")
+                .HasColumnName("num_sc");
+            entity.Property(e => e.Plan)
+                .HasMaxLength(1)
+                .HasComment("Глава плана счетов (А, Б, В, Г, Д)")
+                .HasColumnName("plan");
+        });
+
+        modelBuilder.Entity<TemplatesNor>(entity =>
+        {
+            entity.HasKey(e => e.IdTnor).HasName("templates_nor_pkey");
+
+            entity.ToTable("templates_nor", tb => tb.HasComment("Таблица содержит струкутру 123 и 135 форм"));
+
+            entity.Property(e => e.IdTnor)
+                .ValueGeneratedOnAdd()
+                .HasComment("Id строки")
+                .HasColumnName("id_tnor");
+            entity.Property(e => e.Code)
+                .HasMaxLength(15)
+                .IsFixedLength()
+                .HasComment("Код показателя")
+                .HasColumnName("code");
+            entity.Property(e => e.Form)
+                .HasMaxLength(3)
+                .IsFixedLength()
+                .HasComment("Номер формы (123/135)")
+                .HasColumnName("form");
+            entity.Property(e => e.Name)
+                .HasComment("Наименование показателя")
+                .HasColumnName("name");
+        });
+
+        OnModelCreatingPartial(modelBuilder);
+    }
+
+	// метод, если нужно дополнительно настроить модель в другом файле
+	partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит данные 101 формы для банка на дату
+/// </summary>
+public partial class Data101
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int Id101 { get; set; }
+
+    /// <summary>
+    /// Id шапки, т.е., для какого банка и на какую дату
+    /// </summary>
+    public int? IdInfo { get; set; }
+
+    /// <summary>
+    /// Id строки из 101 формы (БС2)
+    /// </summary>
+    public int? IdT101 { get; set; }
+
+    /// <summary>
+    /// Входящие остатки итого, тыс. руб
+    /// </summary>
+    public decimal? Vint { get; set; }
+
+    /// <summary>
+    /// Исходящие остатки итого, тыс. руб
+    /// </summary>
+    public decimal? Iitg { get; set; }
+
+    public virtual FormInfo? IdInfoNavigation { get; set; }
+
+    public virtual Templates101? IdT101Navigation { get; set; }
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит данные 123/135 форм для банка на дату
+/// </summary>
+public partial class DataNor
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int IdNor { get; set; }
+
+    /// <summary>
+    /// Id шапки, т.е., для какого банка и на какую дату
+    /// </summary>
+    public int? IdInfo { get; set; }
+
+    /// <summary>
+    /// Id строки из 123/135 форм (код норматива)
+    /// </summary>
+    public int? IdTnor { get; set; }
+
+    /// <summary>
+    /// Значение норматива
+    /// </summary>
+    public decimal? Val { get; set; }
+
+    public virtual FormInfo? IdInfoNavigation { get; set; }
+
+    public virtual TemplatesNor? IdTnorNavigation { get; set; }
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит шапку данных форм
+/// </summary>
+public partial class FormInfo
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int IdInfo { get; set; }
+
+    /// <summary>
+    /// Рег. номер банка, для которого расчитывается форма
+    /// </summary>
+    public int Regnum { get; set; }
+
+    /// <summary>
+    /// Дата, на которую расчитывается форма
+    /// </summary>
+    public DateOnly? Dt { get; set; }
+
+    public virtual ICollection<Data101> Data101s { get; set; } = new List<Data101>();
+
+    public virtual ICollection<DataNor> DataNors { get; set; } = new List<DataNor>();
+
+    public virtual ICollection<MethodsResult> MethodsResults { get; set; } = new List<MethodsResult>();
+
+    public virtual Bank RegnumNavigation { get; set; } = null!;
+}
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит список методик
+/// </summary>
+public partial class Method
+{
+	/// <summary>
+	/// Id методики
+	/// </summary>
+	[DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+	public int IdMethods { get; set; }
+
+    /// <summary>
+    /// Наименование методики
+    /// </summary>
+    public string Name { get; set; } = null!;
+
+    /// <summary>
+    /// Описание методики, ее история, основные принципы
+    /// </summary>
+    public string? Descr { get; set; }
+
+    public virtual ICollection<Argument> Arguments { get; set; } = new List<Argument>();
+
+
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит расчитанные показатели по методикам для банка на дату
+/// </summary>
+public partial class MethodsResult
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int IdRes { get; set; }
+
+    /// <summary>
+    /// Id шапки, т.е., для какого банка и на какую дату
+    /// </summary>
+    public int? IdInfo { get; set; }
+
+    /// <summary>
+    /// Id показателя
+    /// </summary>
+    public int? IdArg { get; set; }
+
+    /// <summary>
+    /// Значение показателя
+    /// </summary>
+    public decimal? Val { get; set; }
+
+    public virtual Argument? IdArgNavigation { get; set; }
+
+    public virtual FormInfo? IdInfoNavigation { get; set; }
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит струкутру 101 формы
+/// </summary>
+public partial class Templates101
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int IdT101 { get; set; }
+
+    /// <summary>
+    /// Глава плана счетов (А, Б, В, Г, Д)
+    /// </summary>
+    public char? Plan { get; set; }
+
+    /// <summary>
+    /// Номер счета 1-го, 2-го порядка или суммы БС2
+    /// </summary>
+    /// не используется
+    public string? NumSc { get; set; }
+
+    /// <summary>
+    /// Наименование БС2
+    /// </summary>
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Признак счета (А/П)
+    /// </summary>
+    public string? AP { get; set; }
+
+    public virtual ICollection<ArgConsist> ArgConsists { get; set; } = new List<ArgConsist>();
+
+    public virtual ICollection<Data101> Data101s { get; set; } = new List<Data101>();
+}
+using System;
+using System.Collections.Generic;
+
+namespace BlazorApp1.Models;
+
+/// <summary>
+/// Таблица содержит струкутру 123 и 135 форм
+/// </summary>
+public partial class TemplatesNor
+{
+    /// <summary>
+    /// Id строки
+    /// </summary>
+    public int IdTnor { get; set; }
+
+    /// <summary>
+    /// Номер формы (123/135)
+    /// </summary>
+    public string? Form { get; set; }
+
+    /// <summary>
+    /// Код показателя
+    /// </summary>
+    public string? Code { get; set; }
+
+    /// <summary>
+    /// Наименование показателя
+    /// </summary>
+    public string? Name { get; set; }
+
+    public virtual ICollection<ArgConsist> ArgConsists { get; set; } = new List<ArgConsist>();
+
+    public virtual ICollection<DataNor> DataNors { get; set; } = new List<DataNor>();
+}
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v8.0", FrameworkDisplayName = ".NET 8.0")]
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     Р­С‚РѕС‚ РєРѕРґ СЃРѕР·РґР°РЅ РїСЂРѕРіСЂР°РјРјРѕР№.
+//     РСЃРїРѕР»РЅСЏРµРјР°СЏ РІРµСЂСЃРёСЏ:4.0.30319.42000
+//
+//     РР·РјРµРЅРµРЅРёСЏ РІ СЌС‚РѕРј С„Р°Р№Р»Рµ РјРѕРіСѓС‚ РїСЂРёРІРµСЃС‚Рё Рє РЅРµРїСЂР°РІРёР»СЊРЅРѕР№ СЂР°Р±РѕС‚Рµ Рё Р±СѓРґСѓС‚ РїРѕС‚РµСЂСЏРЅС‹ РІ СЃР»СѓС‡Р°Рµ
+//     РїРѕРІС‚РѕСЂРЅРѕР№ РіРµРЅРµСЂР°С†РёРё РєРѕРґР°.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("BlazorApp1")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c2c93cb36bf2fcb1b3ccee53b236e3f02e9ff936")]
+[assembly: System.Reflection.AssemblyProductAttribute("BlazorApp1")]
+[assembly: System.Reflection.AssemblyTitleAttribute("BlazorApp1")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// РЎРѕР·РґР°РЅРѕ РєР»Р°СЃСЃРѕРј WriteCodeFragment MSBuild.
+
+// <auto-generated/>
+global using global::Microsoft.AspNetCore.Builder;
+global using global::Microsoft.AspNetCore.Hosting;
+global using global::Microsoft.AspNetCore.Http;
+global using global::Microsoft.AspNetCore.Routing;
+global using global::Microsoft.Extensions.Configuration;
+global using global::Microsoft.Extensions.DependencyInjection;
+global using global::Microsoft.Extensions.Hosting;
+global using global::Microsoft.Extensions.Logging;
+global using global::System;
+global using global::System.Collections.Generic;
+global using global::System.IO;
+global using global::System.Linq;
+global using global::System.Net.Http;
+global using global::System.Net.Http.Json;
+global using global::System.Threading;
+global using global::System.Threading.Tasks;
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     Р­С‚РѕС‚ РєРѕРґ СЃРѕР·РґР°РЅ РїСЂРѕРіСЂР°РјРјРѕР№.
+//     РСЃРїРѕР»РЅСЏРµРјР°СЏ РІРµСЂСЃРёСЏ:4.0.30319.42000
+//
+//     РР·РјРµРЅРµРЅРёСЏ РІ СЌС‚РѕРј С„Р°Р№Р»Рµ РјРѕРіСѓС‚ РїСЂРёРІРµСЃС‚Рё Рє РЅРµРїСЂР°РІРёР»СЊРЅРѕР№ СЂР°Р±РѕС‚Рµ Рё Р±СѓРґСѓС‚ РїРѕС‚РµСЂСЏРЅС‹ РІ СЃР»СѓС‡Р°Рµ
+//     РїРѕРІС‚РѕСЂРЅРѕР№ РіРµРЅРµСЂР°С†РёРё РєРѕРґР°.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: Microsoft.AspNetCore.Mvc.ApplicationParts.ProvideApplicationPartFactoryAttribute("Microsoft.AspNetCore.Mvc.ApplicationParts.ConsolidatedAssemblyApplicationPartFact" +
+    "ory, Microsoft.AspNetCore.Mvc.Razor")]
+
+// РЎРѕР·РґР°РЅРѕ РєР»Р°СЃСЃРѕРј WriteCodeFragment MSBuild.
+
+/* Класс для работы с загрузкой данных из ЦБ*/
+
+using BlazorApp1.Models;
+using global::CregitInfoWS;
+using Google.Protobuf.WellKnownTypes;
+using Microsoft.AspNetCore.Components;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System;
+using System.Data;
+using System.Linq;
+using System.ServiceModel;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
+namespace BlazorApp1
+{
+	public class CreditOrgInfoClient
+	{
+		private readonly CreditOrgInfoSoap _client;
+		
+		private readonly IDbContextFactory<BanksContext> dbFactory;
+		public CreditOrgInfoClient(CreditOrgInfoSoap client, IDbContextFactory<BanksContext> dbFactory)
+		{
+			_client = client;
+			this.dbFactory = dbFactory;
+		}
+
+		private bool rewrite = false;
+
+		//вспомогательный метод - вывод dataset в консоль
+		private void ShowDataSet(DataSet dataSet)
+		{
+			foreach (DataTable table in dataSet.Tables)
+			{
+				Console.WriteLine($"Таблица: {table.TableName}");
+
+				// Вывод заголовков колонок
+				Console.WriteLine(string.Join(" | ", table.Columns.Cast<DataColumn>().Select(col => col.ColumnName)));
+
+				// Разделитель
+				Console.WriteLine(new string('-', 50));
+
+				// Вывод всех строк
+				foreach (DataRow row in table.Rows)
+				{
+					Console.WriteLine(string.Join(" | ", row.ItemArray));
+				}
+
+				Console.WriteLine(new string('=', 50)); // Разделитель между таблицами
+			}
+		}
+
+
+		// получение наименования банка по рег. номеру
+		public async Task<string> GetBankNameByRegnum(int regnum)
+		{
+			double internal_code = await _client.RegNumToIntCodeAsync(regnum);
+			if (internal_code == -1) return "";
+			XmlNode xmlResponse = await _client.CreditInfoByIntCodeXMLAsync(internal_code);
+
+			if (xmlResponse == null) return "";
+			XmlDocument xmlDoc = new XmlDocument();
+			xmlDoc.LoadXml(xmlResponse.OuterXml);
+
+			XmlNode? orgNameNode = xmlDoc.SelectSingleNode("//OrgName");
+			return orgNameNode?.InnerText ?? "";
+		}
+
+		// получение данных по форме 123 по рег. номеру банка и дате
+		public async Task<DataSet> GetData123(int regnum, DateTime dt)
+		{
+			var response = await _client.Data123FormFullAsync(regnum, dt);
+
+			if (response == null || response.Nodes == null || response.Nodes.Count == 0)
+				return null; // Если данные пустые
+
+			// Оборачиваем полученные XML-элементы в общий корневой узел
+			XDocument xmlDoc = new XDocument(
+				new XDeclaration("1.0", "utf-8", null), // Добавляем заголовок XML
+				new XElement("Root", response.Nodes)
+			);
+
+			DataSet dataSet = new DataSet();
+
+			using (XmlReader xmlReader = xmlDoc.CreateReader())
+			{
+				dataSet.ReadXml(xmlReader); // Читаем XML
+			}
+
+			ShowDataSet(dataSet);
+
+			return dataSet;
+		}
+
+        // получение данных по форме 135 по рег. номеру банка и дате
+        public async Task<DataSet> GetData135(int regnum, DateTime dt)
+        {
+            // список колонок, которые необходимо убрать при выводе
+            List<string> columnsToDelete = new List<string> { "V3_2", "V3_3" };
+
+            var response = await _client.Data135FormFullAsync(regnum, dt);
+
+            if (response == null || response.Nodes == null || response.Nodes.Count == 0)
+                return null; // Если данные пустые
+
+            // Оборачиваем полученные XML-элементы в общий корневой узел
+            XDocument xmlDoc = new XDocument(
+                new XDeclaration("1.0", "utf-8", null), // Добавляем заголовок XML
+                new XElement("Root", response.Nodes)
+            );
+
+            DataSet dataSet = new DataSet();
+
+            using (XmlReader xmlReader = xmlDoc.CreateReader())
+            {
+                dataSet.ReadXml(xmlReader); // Читаем XML
+            }
+
+            // убираем пустую инфу, делаем корректный вывод
+            foreach (DataTable table in dataSet.Tables.Cast<DataTable>().ToList())
+            {
+                if (table.Rows.Count == 0) // Проверяем, пустая ли таблица
+                {
+                    dataSet.Tables.Remove(table); // Удаляем таблицу
+                }
+                else // если таблица не пуста, удаляем лишние столбцы
+                {
+                    foreach (var columnName in columnsToDelete)
+                    {
+                        if (table.Columns.Contains(columnName)) // Проверяем, есть ли столбец
+                        {
+                            table.Columns.Remove(columnName);
+                        }
+                    }
+                }
+            }
+
+            ShowDataSet(dataSet);
+
+            return dataSet;
+        }
+
+		// загрузка данных нормативов в базу 
+        private async Task LoadData(
+			int regnum,
+			DateTime dt,
+			string codeColumn,
+			string valueColumn,
+			Func<Task<DataSet>> getDataFunc)
+		{
+			// Получаем контекст базы данных
+			await using var db = dbFactory?.CreateDbContext();
+			if (db == null)
+			{
+				Console.WriteLine("Ошибка: dbFactory == null");
+				return;
+			}
+
+			// Загружаем данные формы
+			var dataSet = await getDataFunc();
+			if (dataSet == null) return;
+
+			// Получаем идентификатор расчета (id_info)
+			int id_info = await CreateLoadInfo(regnum, dt);
+
+			var incomingRecords = new List<DataNor>();    // Список новых записей для сохранения
+			var validTnors = new HashSet<int>();          // Список id_tnor, найденных по кодам шаблонов
+
+			// Обход всех таблиц и строк внутри DataSet
+			foreach (var table in dataSet.Tables.Cast<DataTable>())
+			{
+				foreach (DataRow row in table.Rows)
+				{
+					var code = row[codeColumn]?.ToString();
+					// пропуск пустых шаблонов
+					if (string.IsNullOrWhiteSpace(code)) continue;
+
+					// Ищем соответствующий шаблон в базе
+					var id_tnor = await db.TemplatesNors
+										  .Where(t => t.Code == code)
+										  .Select(t => (int?)t.IdTnor)
+										  .FirstOrDefaultAsync();
+
+					// Пропускаем, если шаблон не найден
+					if (id_tnor == null) continue;
+
+					// Пробуем распарсить значение кода в decimal
+					if (!decimal.TryParse(row[valueColumn]?.ToString(), out var val)) continue;
+
+					// Добавляем id_tnor в набор для возможного удаления старых записей
+					validTnors.Add(id_tnor.Value);
+
+					// Добавляем запись в список
+					incomingRecords.Add(new DataNor
+					{
+						IdInfo = id_info,
+						IdTnor = id_tnor.Value,
+						Val = val
+					});
+				}
+			}
+
+			if (!incomingRecords.Any()) return;
+
+			// Получаем существующие записи из базы
+			var existingRecords = await db.DataNors
+				.Where(r => r.IdInfo == id_info && r.IdTnor != null && validTnors.Contains(r.IdTnor.Value))
+				.ToListAsync();
+
+			foreach (var newRecord in incomingRecords)
+			{
+				var existing = existingRecords.FirstOrDefault(r => r.IdTnor == newRecord.IdTnor);
+				if (existing != null)
+				{
+					// Обновляем существующее значение
+					existing.Val = newRecord.Val;
+				}
+				else
+				{
+					// Добавляем новое
+					db.DataNors.Add(newRecord);
+				}
+			}
+
+			await db.SaveChangesAsync();
+		}
+
+		//загрузка 123 формы в базу
+		public async Task LoadData123(int regnum, DateTime dt)
+		{
+			await LoadData(
+				regnum,
+				dt,
+				codeColumn: "CODE",
+				valueColumn: "VALUE",
+				getDataFunc: () => GetData123(regnum, dt)
+			);
+		}
+
+        //загрузка 135 формы в базу
+        public async Task LoadData135(int regnum, DateTime dt)
+		{
+			await LoadData(
+				regnum,
+				dt,
+				codeColumn: "C3",
+				valueColumn: "V3",
+				getDataFunc: () => GetData135(regnum, dt)
+			);
+		}
+
+		// получение данных по форме 101 по рег. номеру банка и дате
+		public async Task<DataSet> GetData101(int regnum, DateTime dt)
+		{
+			// список колонок, которые необходимо оставить при выводе
+			List<string> columnsToKeep = new List<string> { "pln", "ap", "numsc", "vitg", "iitg", "priz", "Column1" };
+
+			var response = await _client.Data101FNewAsync(regnum, dt);
+
+			if (response == null || response.Nodes == null || response.Nodes.Count == 0)
+				return null; // Если данные пустые
+
+			// Оборачиваем полученные XML-элементы в общий корневой узел
+			XDocument xmlDoc = new XDocument(
+				new XDeclaration("1.0", "utf-8", null), // Добавляем заголовок XML
+				new XElement("Root", response.Nodes)
+			);
+
+			DataSet dataSet = new DataSet();
+
+			using (XmlReader xmlReader = xmlDoc.CreateReader())
+			{
+				dataSet.ReadXml(xmlReader); // Читаем XML
+			}
+
+			// Удаляем таблицу F1011, если она есть
+			if (dataSet.Tables.Contains("F1011"))
+			{
+				dataSet.Tables.Remove("F1011");
+			}
+
+			// убираем пустую инфу, делаем корректный вывод
+			foreach (DataTable table in dataSet.Tables)
+			{
+				var columnsToRemove = table.Columns.Cast<DataColumn>() // преобразование table.Columns в IEnumerable<DataColumn>, чтобы применить LINQ.
+										.Select(c => c.ColumnName)  // получение списка имен столбцов
+										.Except(columnsToKeep)  // оставляет только те элементы, которые не входят в columnsToKeep
+										.ToList();
+
+				foreach (string columnName in columnsToRemove)
+				{
+					table.Columns.Remove(columnName); // удаление лишних колонок
+				}
+			}
+
+			ShowDataSet(dataSet);
+
+			return dataSet;
+        }
+
+		// загрузка данных по 101 форме в базу данных
+		public async Task LoadData101(int regnum, DateTime dt)
+		{
+			await using var db = dbFactory?.CreateDbContext(); 
+			if (db == null)
+			{
+				Console.WriteLine("Ошибка: dbFactory == null");
+				return;
+			}
+			// загрузить 101 форму в dataset
+			var dataSet = await GetData101(regnum, dt);
+			// объявление списка записей для сохранения в базу
+            var data101Records = new List<Data101>();
+            // если данные есть
+            if (dataSet == null) return;
+
+            // получить словарь соответсвий (ap, numsc) - id_t101 шаблона 101 формы
+            var id_t101s = await FindTemplateId101(dataSet);
+			// получить id расчета
+			int id_info = await CreateLoadInfo(regnum, dt);
+
+			// удалить старые данные
+			if (rewrite)
+			{
+				var existingRecords = await db.Data101s
+											  .Where(d => d.IdInfo == id_info)
+											  .ToListAsync();
+				db.Data101s.RemoveRange(existingRecords);
+				await db.SaveChangesAsync();
+			}
+
+			foreach (DataTable table in dataSet.Tables)
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    string? ap = row["ap"]?.ToString();
+                    string? numsc = row["numsc"]?.ToString();
+                    string? pln = row["pln"]?.ToString();
+
+                    if (string.IsNullOrWhiteSpace(ap) || string.IsNullOrWhiteSpace(numsc))
+                        continue;
+
+                    // попытка найти значение по ключу в словаре id_t101s
+                    if (!id_t101s.TryGetValue((ap, numsc, pln), out int id_t101))
+                        continue; // если шаблон не найден — пропускаем
+
+                    // Парсим значения
+                    decimal.TryParse(row["vitg"]?.ToString(), out var vint);
+                    decimal.TryParse(row["iitg"]?.ToString(), out var iitg);
+
+                    // список объектов типа Data101, которые хотим добавить в базу
+                    // добавляем новый объект в список, чтобы потом все записи массово сохранить в базу.
+                    data101Records.Add(new Data101
+                    {
+                        IdInfo = id_info,
+                        IdT101 = id_t101,
+                        Vint = vint,
+                        Iitg = iitg
+                    });
+                }
+            }
+
+            db.Data101s.AddRange(data101Records);
+            await db.SaveChangesAsync();
+        }
+
+
+		// получить id шаблона 101 формы по счету и его типу (А/П)
+		// возвращает словарь соответсвий (ap, numsc, pln) - id_t101
+		public async Task<Dictionary<(string ap, string numsc, string pln), int>> FindTemplateId101(DataSet dataSet)
+		{
+			// Сбор уникальных троек (ap, numsc, pln) из DataSet
+			var keys = new HashSet<(string ap, string numsc, string pln)>();
+
+			await using var db = dbFactory.CreateDbContext();
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				foreach (DataRow row in table.Rows)
+				{
+					string? ap = row["ap"]?.ToString();
+					string? numsc = row["numsc"]?.ToString();
+					string? pln = row["pln"]?.ToString();
+
+					if (!string.IsNullOrWhiteSpace(ap) &&
+						!string.IsNullOrWhiteSpace(numsc) &&
+						!string.IsNullOrWhiteSpace(pln))
+					{
+						keys.Add((ap, numsc, pln));
+					}
+				}
+			}
+
+			// Загружаем шаблоны из БД
+			var allTemplates = await db.Templates101s.ToListAsync();
+
+			// Фильтруем по тройке (ap, name, plan)
+			var matched = allTemplates
+				.Where(t => keys.Contains((t.AP, t.Name, t.Plan.ToString())))
+				.ToDictionary(t => (t.AP, t.Name, t.Plan.ToString()), t => t.IdT101);
+
+			return matched;
+		}
+
+
+		// создание загрузки данных форм, заполнение банка и даты
+		public async Task<int> CreateLoadInfo(int regnum, DateTime dt)
+		{
+            await using var db = dbFactory.CreateDbContext();
+            var dateOnly = DateOnly.FromDateTime(dt);
+			int newInfo = await CheckInfo(regnum, dt);
+
+			// Поиск существующей записи
+			if (newInfo == -1)
+			{
+				// Создание новой записи
+				var record = new FormInfo
+				{
+					Regnum = regnum,
+					Dt = DateOnly.FromDateTime(dt)
+				};
+
+				db.FormInfos.Add(record);
+				await db.SaveChangesAsync();
+
+				// возврат id созданной записи
+				return record.IdInfo;
+			}
+			// возврат существующей записи
+			else return newInfo;
+        }
+
+		// проверка есть ли такое сочетание банк/дата
+		public async Task<int> CheckInfo(int regnum, DateTime dt)
+		{
+            await using var db = dbFactory.CreateDbContext();
+            var dateOnly = DateOnly.FromDateTime(dt);
+
+            // Поиск существующей записи
+            var existing = await db.FormInfos
+                .FirstOrDefaultAsync(x => x.Regnum == regnum && x.Dt == dateOnly);
+
+			if (existing != null)
+			{
+				return existing.IdInfo;
+			}
+			else return -1;
+        }
+
+      }
+}
+
+
+using BlazorApp1.Models;
+using ClosedXML.Excel;
+using DocumentFormat.OpenXml.InkML;
+using Microsoft.EntityFrameworkCore;
+using System.IO;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
+namespace BlazorApp1
+{
+	public class ExcelService
+	{
+		private readonly IDbContextFactory<BanksContext> dbFactory;
+
+		//конструктор с передачей фабрики контекста базы данных
+		public ExcelService(IDbContextFactory<BanksContext> dbFactory)
+		{
+			this.dbFactory = dbFactory;
+		}
+
+		// возвращает массив байтов, содержащий Excel-фай
+		public async Task<byte[]> GenerateExcelAsync(DateOnly dt, int regnum, int methodId)
+		{
+			//Создаётся новый экземпляр BanksContext
+			//await using гарантирует, что context будет автоматически освобождён
+			await using var db = await dbFactory.CreateDbContextAsync();
+
+			// формирование SQL-подобный LINQ-запрос
+			var query = from fi in db.FormInfos
+						where fi.Dt == dt && fi.Regnum == regnum
+						join bnk in db.Banks on fi.Regnum equals bnk.Regnum
+						join mr in db.MethodsResults on fi.IdInfo equals mr.IdInfo
+						join arg in db.Arguments on mr.IdArg equals arg.IdArg
+						where arg.IdMethods == methodId
+						join m in db.Methods on arg.IdMethods equals m.IdMethods
+						select new
+						{
+							fi.Regnum,
+							fi.Dt,
+							bnk.Name,
+							MethodName = m.Name,
+							MethodDescr = m.Descr,
+							ArgumentName = arg.Name,
+							ArgumentShortName = arg.ShortName,
+							mr.Val
+						};
+
+			// выполнение запроса и сохранение в список
+			var data = await query.ToListAsync();
+
+			// Используем первую строку для заголовков
+			var first = data.First(); 
+
+			// Создаётся Excel-файл с именем Results
+			using var workbook = new XLWorkbook();
+			var worksheet = workbook.Worksheets.Add("Results");
+
+			// Заголовок — название метода
+			worksheet.Cell(1, 1).Value = first.MethodName;
+			worksheet.Range(1, 1, 1, 3).Merge().Style.Font.SetBold().Font.FontSize = 16;
+
+			// Описание метода
+			worksheet.Cell(2, 1).Value = first.MethodDescr;
+			worksheet.Range(2, 1, 2, 7).Merge().Style.Font.FontSize = 12;
+
+			// Информация: Имя (Name) и Дата (Dt)
+			worksheet.Cell(3, 1).Value = first.Name;
+			worksheet.Cell(3, 7).Value = first.Dt?.ToDateTime(TimeOnly.MinValue).ToString("dd.MM.yyyy");
+
+			// Заголовки таблицы
+			worksheet.Cell(5, 1).Value = "Показатель";
+			worksheet.Cell(5, 2).Value = "Краткое имя";
+			worksheet.Cell(5, 3).Value = "Значение";
+
+
+			// запись данных
+			for (int i = 0; i < data.Count; i++)
+			{ 
+					var row = data[i];
+					worksheet.Cell(i + 6, 1).Value = row.ArgumentName;
+					worksheet.Cell(i + 6, 2).Value = row.ArgumentShortName;
+					worksheet.Cell(i + 6, 3).Value = row.Val;
+			}
+
+			// Автоширина
+			worksheet.Columns().AdjustToContents();
+
+			// Файл сохраняется в MemoryStream
+			using var stream = new MemoryStream();
+			workbook.SaveAs(stream);
+			return stream.ToArray();
+		}
+	}
+}
+using BlazorApp1;
+using BlazorApp1.Components;
+using BlazorApp1.Models;
+using CregitInfoWS;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using System.ServiceModel;
+
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
+builder.Services.AddScoped<CreditOrgInfoClient>();
+
+// получение строки подключения
+var connectionString = builder.Configuration.GetConnectionString("PostgresConnection");
+
+// Добавляем поддержку PostgreSQL через Entity Framework Core
+builder.Services.AddDbContextFactory<BanksContext>(options =>
+	options.UseNpgsql(connectionString));
+
+builder.Services.AddBlazorBootstrap();
+
+
+// Регистрируем CreditOrgInfoSoap вручную:
+builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
+{
+	var binding = new BasicHttpBinding();
+	var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
+	var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
+	return factory.CreateChannel();
+});
+
+// И регистрируем сам клиент
+builder.Services.AddScoped<CreditOrgInfoClient>();
+builder.Services.AddScoped<ExcelService>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+app.UseAntiforgery();
+
+
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode();
+
+app.Run();
