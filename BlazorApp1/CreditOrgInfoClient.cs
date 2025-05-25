@@ -113,7 +113,56 @@ namespace BlazorApp1
 			return dataSet;
 		}
 
-		private async Task LoadData(
+        // получение данных по форме 135 по рег. номеру банка и дате
+        public async Task<DataSet> GetData135(int regnum, DateTime dt)
+        {
+            // список колонок, которые необходимо убрать при выводе
+            List<string> columnsToDelete = new List<string> { "V3_2", "V3_3" };
+
+            var response = await _client.Data135FormFullAsync(regnum, dt);
+
+            if (response == null || response.Nodes == null || response.Nodes.Count == 0)
+                return null; // Если данные пустые
+
+            // Оборачиваем полученные XML-элементы в общий корневой узел
+            XDocument xmlDoc = new XDocument(
+                new XDeclaration("1.0", "utf-8", null), // Добавляем заголовок XML
+                new XElement("Root", response.Nodes)
+            );
+
+            DataSet dataSet = new DataSet();
+
+            using (XmlReader xmlReader = xmlDoc.CreateReader())
+            {
+                dataSet.ReadXml(xmlReader); // Читаем XML
+            }
+
+            // убираем пустую инфу, делаем корректный вывод
+            foreach (DataTable table in dataSet.Tables.Cast<DataTable>().ToList())
+            {
+                if (table.Rows.Count == 0) // Проверяем, пустая ли таблица
+                {
+                    dataSet.Tables.Remove(table); // Удаляем таблицу
+                }
+                else // если таблица не пуста, удаляем лишние столбцы
+                {
+                    foreach (var columnName in columnsToDelete)
+                    {
+                        if (table.Columns.Contains(columnName)) // Проверяем, есть ли столбец
+                        {
+                            table.Columns.Remove(columnName);
+                        }
+                    }
+                }
+            }
+
+            ShowDataSet(dataSet);
+
+            return dataSet;
+        }
+
+		// загрузка данных нормативов в базу 
+        private async Task LoadData(
 			int regnum,
 			DateTime dt,
 			string codeColumn,
@@ -192,6 +241,8 @@ namespace BlazorApp1
 				await db.SaveChangesAsync();
 			}
 		}
+		
+		//загрузка 123 формы в базу
 		public async Task LoadData123(int regnum, DateTime dt)
 		{
 			await LoadData(
@@ -203,7 +254,8 @@ namespace BlazorApp1
 			);
 		}
 
-		public async Task LoadData135(int regnum, DateTime dt)
+        //загрузка 135 формы в базу
+        public async Task LoadData135(int regnum, DateTime dt)
 		{
 			await LoadData(
 				regnum,
@@ -213,105 +265,6 @@ namespace BlazorApp1
 				getDataFunc: () => GetData135(regnum, dt)
 			);
 		}
-
-
-
-		// получение данных по форме 135 по рег. номеру банка и дате
-		public async Task<DataSet> GetData135(int regnum, DateTime dt)
-		{
-			// список колонок, которые необходимо убрать при выводе
-			List<string> columnsToDelete = new List<string> { "V3_2", "V3_3" };
-
-			var response = await _client.Data135FormFullAsync(regnum, dt);
-
-			if (response == null || response.Nodes == null || response.Nodes.Count == 0)
-				return null; // Если данные пустые
-
-			// Оборачиваем полученные XML-элементы в общий корневой узел
-			XDocument xmlDoc = new XDocument(
-				new XDeclaration("1.0", "utf-8", null), // Добавляем заголовок XML
-				new XElement("Root", response.Nodes)
-			);
-
-			DataSet dataSet = new DataSet();
-
-			using (XmlReader xmlReader = xmlDoc.CreateReader())
-			{
-				dataSet.ReadXml(xmlReader); // Читаем XML
-			}
-
-			// убираем пустую инфу, делаем корректный вывод
-			foreach (DataTable table in dataSet.Tables.Cast<DataTable>().ToList())
-			{
-				if (table.Rows.Count == 0) // Проверяем, пустая ли таблица
-				{
-					dataSet.Tables.Remove(table); // Удаляем таблицу
-				}
-				else // если таблица не пуста, удаляем лишние столбцы
-				{
-					foreach (var columnName in columnsToDelete)
-					{
-						if (table.Columns.Contains(columnName)) // Проверяем, есть ли столбец
-						{
-							table.Columns.Remove(columnName);
-						}
-					}
-				}
-			}
-
-			ShowDataSet(dataSet);
-
-			return dataSet;
-		}
-
-		// загрузка данных по 135 форме в базу данных
-		/*
-		public async Task LoadData135(int regnum, DateTime dt)
-		{
-			await using var db = dbFactory?.CreateDbContext(); 
-			if (db == null)
-			{
-				Console.WriteLine("Ошибка: dbFactory == null");
-				return;
-			}
-			// загрузить 135 форму в dataset
-			var dataSet = await GetData135(regnum, dt);
-			// объявление списка записей для сохранения в базу
-			var data135Records = new List<DataNor>();
-			// если данные есть
-			if (dataSet == null) return;
-
-			// получить id расчета
-			int id_info = await CreateLoad(regnum, dt);
-
-			foreach (DataTable table in dataSet.Tables)
-			{
-				foreach (DataRow row in table.Rows)
-				{
-					var id_tnor = await db.TemplatesNors
-										 .Where(t => t.Code == row["C3"])
-										 .Select(t => (int?)t.IdTnor)
-										 .FirstOrDefaultAsync();
-
-					// Пробуем распарсить значение
-					if (!decimal.TryParse(row["V3"]?.ToString(), out var val))
-						continue; // Пропустить, если значение V3 отсутствует или не число
-
-					data135Records.Add(new DataNor
-					{
-						IdInfo = id_info,
-						IdTnor = id_tnor,
-						Val = val
-					});
-				}
-			}
-
-
-
-			db.DataNors.AddRange(data135Records);
-			await db.SaveChangesAsync();
-		}
-		*/
 
 		// получение данных по форме 101 по рег. номеру банка и дате
 		public async Task<DataSet> GetData101(int regnum, DateTime dt)
@@ -472,30 +425,43 @@ namespace BlazorApp1
 		{
             await using var db = dbFactory.CreateDbContext();
             var dateOnly = DateOnly.FromDateTime(dt);
+			int newInfo = await CheckInfo(regnum, dt);
+
+			// Поиск существующей записи
+			if (newInfo == -1)
+			{
+				// Создание новой записи
+				var record = new FormInfo
+				{
+					Regnum = regnum,
+					Dt = DateOnly.FromDateTime(dt)
+				};
+
+				db.FormInfos.Add(record);
+				await db.SaveChangesAsync();
+
+				// возврат id созданной записи
+				return record.IdInfo;
+			}
+			// возврат существующей записи
+			else return newInfo;
+        }
+
+		// проверка есть ли такое сочетание банк/дата
+		public async Task<int> CheckInfo(int regnum, DateTime dt)
+		{
+            await using var db = dbFactory.CreateDbContext();
+            var dateOnly = DateOnly.FromDateTime(dt);
 
             // Поиск существующей записи
             var existing = await db.FormInfos
                 .FirstOrDefaultAsync(x => x.Regnum == regnum && x.Dt == dateOnly);
 
-			if (existing != null) 
-			{ 
-				rewrite = true; // стереть и записать данные заново
-
-				return existing.IdInfo; 
-			}
-
-            // Создание новой записи
-            var record = new FormInfo
+			if (existing != null)
 			{
-				Regnum = regnum,
-				Dt = DateOnly.FromDateTime(dt)
-			}; 
-
-            db.FormInfos.Add(record);
-            await db.SaveChangesAsync();
-
-			// возврат id созданной записи
-			return record.IdInfo;
+				return existing.IdInfo;
+			}
+			else return -1;
         }
 
       }
