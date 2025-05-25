@@ -9,62 +9,60 @@
 <h3>Calculate</h3>
 
 <div class="d-flex align-items-start gap-3 flex-wrap">
-<select @bind="SelectedMethod" class="form-select w-25">
-    <option disabled value="0">Выберите методику</option>
-    @foreach (var meth in methods)
-    {
-        <option value="@meth.IdMethods">@meth.Name</option>
-    }
-</select>
+	<select @bind="SelectedMethod" class="form-select w-25">
+		<option disabled value="0">Выберите методику</option>
+		@foreach (var meth in methods)
+		{
+			<option value="@meth.IdMethods">@meth.Name</option>
+		}
+	</select>
 
 
-    <InputNumber @bind-Value="Regnum" class="form-control w-auto" />
-    <InputDate @bind-Value="OnDate" class="form-control w-auto" />
+	<InputNumber @bind-Value="Regnum" class="form-control w-auto" />
+	<InputDate @bind-Value="OnDate" class="form-control w-auto" />
 
 
-<button class="btn btn-primary" @onclick="Calcs">Рассчитать</button>
+	<button class="btn btn-primary" @onclick="Calcs">Рассчитать</button>
 </div>
 
 @if (args != null && args.Any())
 {
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Показатель</th>
-                <th>Формула</th>
-                <th>Значение</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var a in args)
-            {
-                <tr>
-                    <td>@a.Name</td>
-                    <td>@a.Expression</td>
-                    <td>@(results.TryGetValue(a.IdArg, out var val) ? val.ToString("0.##") : "—")</td>
+	<table class="table">
+		<thead>
+			<tr>
+				<th>Показатель</th>
+				<th>Формула</th>
+				<th>Значение</th>
+			</tr>
+		</thead>
+		<tbody>
+			@foreach (var a in args)
+			{
+				<tr>
+					<td>@a.Name</td>
+					<td>@a.Expression</td>
+					<td>@(results.TryGetValue(a.IdArg, out var val) ? val.ToString("0.##") : "—")</td>
 
-                </tr>
-            }
-        </tbody>
-    </table>
+				</tr>
+			}
+		</tbody>
+	</table>
 }
 
 <!--else
 {
-    <div class="text-muted mt-3">Нет показателей для выбранной методики.</div>
-    не работает
+	<div class="text-muted mt-3">Нет показателей для выбранной методики.</div>
+	не работает
 }-->
-
-
 <!--Модальное окно выбора показателя-->
 <!--В GetItemSelected пердается id и тип выбранной строки-->
 <Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
-    <BodyTemplate>
-        <FormsTemplate />
-    </BodyTemplate>
-    <FooterTemplate>
-        <Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
-    </FooterTemplate>
+	<BodyTemplate>
+		<FormsTemplate />
+	</BodyTemplate>
+	<FooterTemplate>
+		<Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
+	</FooterTemplate>
 </Modal>
 
 
@@ -72,345 +70,362 @@
 
 
 @code {
-    // внедрение фабрики для создания экземпляров BanksContext.
-    [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
-    private int regnum = 1000;
-    //private DateTime onDate = DateTime.Today;
-    private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
-    private CreditOrgInfoClient _creditService;
-    [Inject]
-    public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
+	// внедрение фабрики для создания экземпляров BanksContext.
+	[Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+	private int regnum = 1000;
+	//private DateTime onDate = DateTime.Today;
+	private DateTime onDate = new DateTime(2025, 1, 1); // год - месяц - день;
+	private CreditOrgInfoClient _creditService;
+	[Inject]
+	public CreditOrgInfoClient CreditService { get => _creditService; set => _creditService = value; }
 
 
-    private int selectedMethod = 0; // ID метода по умолчанию
-    private int SelectedMethod
-    {
-        get => selectedMethod;
-        set
-        {
-            if (selectedMethod != value)
-            {
-                selectedMethod = value;
-                _ = LoadArguments(value);
-            }
-        }
-    }
+	private int selectedMethod = 0; // ID метода по умолчанию
+	private int SelectedMethod
+	{
+		get => selectedMethod;
+		set
+		{
+			if (selectedMethod != value)
+			{
+				selectedMethod = value;
+				_ = LoadArguments(value);
+			}
+		}
+	}
 
-    private List<Method> methods = new(); // Список методик
-    private List<Argument> args;
-    private Dictionary<int, decimal> results = new();
-    private Argument Arg { get; set; } = new();
+	private List<Method> methods = new(); // Список методик
+	private List<Argument> args;
+	private Dictionary<int, decimal> results = new();
+	private Argument Arg { get; set; } = new();
 
-    private MethodsResult Result { get; set; } = new();
+	private MethodsResult Result { get; set; } = new();
 
-    public int Regnum { get => regnum; set => regnum = value; }
-    public DateTime OnDate { get => onDate; set => onDate = value; }
-
-
-
-    private async Task LoadMethods()
-    {
-        await using var db = dbFactory.CreateDbContext();
-        methods = await db.Methods.ToListAsync();
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        // Загружаем данные из базы данных
-        await LoadMethods();
-    }
-
-    private async Task LoadArguments(int idMeth)
-    {
-        await using var db = dbFactory.CreateDbContext();
-        args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
-        Console.WriteLine($"Args");
-        Console.WriteLine(string.Join(Environment.NewLine, args.Select(arg => $"Name: {arg.Name}, Id: {arg.IdArg}")));
-        Console.WriteLine($"Method {idMeth}");
-        StateHasChanged();
-    }
-    private async Task OnMethodChanged(ChangeEventArgs e)
-    {
-        Console.WriteLine("selectedMethod" + selectedMethod);
-        await LoadArguments(selectedMethod);
-
-        StateHasChanged();
-
-    }
+	public int Regnum { get => regnum; set => regnum = value; }
+	public DateTime OnDate { get => onDate; set => onDate = value; }
 
 
 
-    private Modal modal = default!;
-    private Modal tempModal = default!;
+	private async Task LoadMethods()
+	{
+		await using var db = dbFactory.CreateDbContext();
+		methods = await db.Methods.ToListAsync();
+	}
 
-    private decimal result = 0;
+	protected override async Task OnInitializedAsync()
+	{
+		// Загружаем данные из базы данных
+		await LoadMethods();
+	}
 
-    // преобразование формулы в постфиксный вид
-    private static List<string> ToPostfix(string expression)
-    {
-        var output = new List<string>();
-        var operators = new Stack<char>();
+	private async Task LoadArguments(int idMeth)
+	{
+		await using var db = dbFactory.CreateDbContext();
+		args = await db.Arguments.Where(a => a.IdMethods == idMeth).ToListAsync();
+		Console.WriteLine($"Args");
+		Console.WriteLine(string.Join(Environment.NewLine, args.Select(arg => $"Name: {arg.Name}, Id: {arg.IdArg}")));
+		Console.WriteLine($"Method {idMeth}");
+		StateHasChanged();
+	}
+	private async Task OnMethodChanged(ChangeEventArgs e)
+	{
+		Console.WriteLine("selectedMethod" + selectedMethod);
+		await LoadArguments(selectedMethod);
 
-        // Приоритет операторов
-        var precedence = new Dictionary<char, int>
-    {
-        { '+', 1 }, { '-', 1 },
-        { '*', 2 }, { '/', 2 }, { '%', 2 },
-        { '^', 3 }
-    };
+		StateHasChanged();
 
-        int i = 0;
-        while (i < expression.Length)
-        {
-            char symb = expression[i];
-
-            // Пропускаем пробелы
-            if (char.IsWhiteSpace(symb))
-            {
-                i++;
-                continue;
-            }
-
-            // Обработка числа (включая отрицательные)
-            // проверка выражения
-            // если цифры, точка или знак минуса, добавляем
-            if (char.IsDigit(symb) || symb == '.' ||
-                (symb == '-' && (i == 0 || expression[i - 1] == '(' || "+-*/%^".Contains(expression[i - 1]))))
-            {
-                // Начинаем собирать число
-                string number = symb.ToString();
-                i++;
-
-                // Продолжаем пока цифры или точка
-                while (i < expression.Length && (char.IsDigit(expression[i]) || expression[i] == '.'))
-                {
-                    number += expression[i];
-                    i++;
-                }
-
-                output.Add(number);
-                continue;
-            }
-
-            // Открывающая скобка
-            if (symb == '(')
-            {
-                operators.Push(symb);
-            }
-            // Закрывающая скобка
-            else if (symb == ')')
-            {
-                while (operators.Count > 0 && operators.Peek() != '(')
-                    output.Add(operators.Pop().ToString()); //выгрузить все операторы до ближайшей открывающей скобки
-                if (operators.Count > 0 && operators.Peek() == '(')
-                    operators.Pop(); // удалить '('
-            }
-            // Оператор
-            else if (precedence.ContainsKey(symb))
-            {
-                while (operators.Count > 0 &&
-                       operators.Peek() != '(' &&
-                       precedence[operators.Peek()] >= precedence[symb]) // приоритет оператора в стеке выше или равен приоритету текущего оператора
-                {
-                    output.Add(operators.Pop().ToString());  // добавляем в выражение
-                }
-                operators.Push(symb); // добавляем текущий оператор в стек
-            }
-
-            i++;
-        }
-
-        // Добавляем оставшиеся операторы
-        while (operators.Count > 0)
-        {
-            output.Add(operators.Pop().ToString());
-        }
-        return output;
-
-    }
-
-    // расчет формулы
-    private static decimal EvaluatePostfix(List<string> express)
-    {
-        var stack = new Stack<decimal>();
-
-        foreach (var exp in express)
-        {
-            if (decimal.TryParse(exp, NumberStyles.Any, CultureInfo.InvariantCulture, out var number))
-            {
-                stack.Push(number);
-            }
-            else
-            {
-                var b = stack.Pop();
-                var a = stack.Pop();
-
-                decimal result = exp switch
-                {
-                    "+" => a + b,
-                    "-" => a - b,
-                    "*" => a * b,
-                    "/" => b != 0 ? a / b : throw new DivideByZeroException(),
-                    "%" => a * b / 100,
-                    "^" => (decimal)Math.Pow((double)a, (double)b),
-                    _ => throw new InvalidOperationException($"Неизвестный оператор: {exp}")
-                };
-
-                stack.Push(result);
-            }
-        }
-
-        return stack.Pop();
-    }
-
-    // вычисление показателей
-    private async void Calcs()
-    {
-
-        Console.WriteLine("Calcs");
-        await using var db = dbFactory.CreateDbContext();
-        var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
-
-        foreach (var arg in args)
-        {
-
-            Console.WriteLine("arg " + arg.ShortName);
-            string? expression = arg.Expression;
-            string? consist = arg.Consist;
-            Console.WriteLine("exp " + expression + " con " + consist);
-
-            if (string.IsNullOrWhiteSpace(expression) || string.IsNullOrWhiteSpace(consist))
-                continue;
-
-            // Разбиваем на строки и сохраняем с префиксами
-            var rawIds = consist.Split(',', StringSplitOptions.RemoveEmptyEntries)
-           .Select(s => s.Trim())
-           .ToList();
-
-            Console.WriteLine("rawIds ");
-            Console.WriteLine(string.Join(Environment.NewLine, rawIds));
-
-            // Разбиваем по типу источника
-            var(aIds, nIds) = SplitIdsByPrefix(rawIds);
-
-            // Ищем параметры в выражении
-            var paramMatches = Regex.Matches(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}")
-    .Cast<Match>()
-    .Select(m => m.Value)
-    .Distinct()
-    .ToList();
-
-            Console.WriteLine("paramMatches");
-            Console.WriteLine(string.Join(Environment.NewLine, paramMatches));
-
-            if (paramMatches.Count != rawIds.Count)
-            {
-                Console.WriteLine($"Incorrect amount: {arg.Name}");
-                continue;
-            }
-
-            // Строим отображение параметра на ID с учетом позиции
-            Dictionary<string, (char Prefix, int Id)> paramToIdMap = new();
-            for (int i = 0; i < paramMatches.Count; i++)
-            {
-                string rawId = rawIds[i];
-                char prefix = rawId[0]; // 'А' или 'Н'
-                int id = int.Parse(rawId[1..]);
-                paramToIdMap[paramMatches[i]] = (prefix, id);
-            }
-
-            // Загружаем данные из Data101
-            var data101 = await db.Data101s
-                .Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
-                .ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
-
-            // Загружаем данные из DataNor
-            var dataNor = await db.DataNors
-                .Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == info)
-                .ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
-
-            // Подстановка значений в формулу
-            var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}", match =>
-            {
-                string param = match.Value;
-
-                if (paramToIdMap.TryGetValue(param, out var info))
-                {
-                    decimal val = 0;
-
-                    if (info.Prefix == 'А')
-                        val = data101.TryGetValue(info.Id, out var v1) ? v1 ?? 0 : 0;
-                    else if (info.Prefix == 'Н')
-                        val = dataNor.TryGetValue(info.Id, out var v2) ? v2 ?? 0 : 0;
-
-                    return val.ToString("G", CultureInfo.InvariantCulture);
-                }
-                return "0";
-            });
-
-            try
-            {
-                var readyExpr = ToPostfix(parsedExpression);
-                result = Math.Round(EvaluatePostfix(readyExpr),2);
-
-                var resultEntity = new MethodsResult
-                    {
-                        IdInfo = info,
-                        IdArg = arg.IdArg,
-                        Val = result
-                    };
-
-                db.MethodsResults.Add(resultEntity);
-                await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-                results[arg.IdArg] = result;
+	}
 
 
-                Console.WriteLine($"Itog '{arg.Name}' = {result}");
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                // если параметр не расчитался - 0 или не сохранять
-                Console.WriteLine($"Error '{expression}': {ex.Message}");
-            }
-        }
-    }
 
-    // разделить параметры по типу источника
-    private (List<int> aIds, List<int> nIds) SplitIdsByPrefix(List<string> rawIds)
-    {
-        var aIds = rawIds.Where(s => s.StartsWith("А", StringComparison.OrdinalIgnoreCase))
-                         .Select(s => int.Parse(s[1..]))
-                         .ToList();
+	private Modal modal = default!;
+	private Modal tempModal = default!;
 
-        var nIds = rawIds.Where(s => s.StartsWith("Н", StringComparison.OrdinalIgnoreCase))
-                         .Select(s => int.Parse(s[1..]))
-                         .ToList();
+	private decimal result = 0;
 
-        return (aIds, nIds);
-    }
-   
-    private async Task OnShowModalClick()
-    {
-        await modal.ShowAsync();
-    }
+	// преобразование формулы в постфиксный вид
+	private static List<string> ToPostfix(string expression)
+	{
+		var output = new List<string>();
+		var operators = new Stack<char>();
 
-    private async Task OnHideModalClick()
-    {
-        await modal.HideAsync();
-    }
+		// Приоритет операторов
+		var precedence = new Dictionary<char, int>
+	{
+		{ '+', 1 }, { '-', 1 },
+		{ '*', 2 }, { '/', 2 }, { '%', 2 },
+		{ '^', 3 }
+	};
+
+		int i = 0;
+		while (i < expression.Length)
+		{
+			char symb = expression[i];
+
+			// Пропускаем пробелы
+			if (char.IsWhiteSpace(symb))
+			{
+				i++;
+				continue;
+			}
+
+			// Обработка числа (включая отрицательные)
+			// проверка выражения
+			// если цифры, точка или знак минуса, добавляем
+			if (char.IsDigit(symb) || symb == '.' ||
+				(symb == '-' && (i == 0 || expression[i - 1] == '(' || "+-*/%^".Contains(expression[i - 1]))))
+			{
+				// Начинаем собирать число
+				string number = symb.ToString();
+				i++;
+
+				// Продолжаем пока цифры или точка
+				while (i < expression.Length && (char.IsDigit(expression[i]) || expression[i] == '.'))
+				{
+					number += expression[i];
+					i++;
+				}
+
+				output.Add(number);
+				continue;
+			}
+
+			// Открывающая скобка
+			if (symb == '(')
+			{
+				operators.Push(symb);
+			}
+			// Закрывающая скобка
+			else if (symb == ')')
+			{
+				while (operators.Count > 0 && operators.Peek() != '(')
+					output.Add(operators.Pop().ToString()); //выгрузить все операторы до ближайшей открывающей скобки
+				if (operators.Count > 0 && operators.Peek() == '(')
+					operators.Pop(); // удалить '('
+			}
+			// Оператор
+			else if (precedence.ContainsKey(symb))
+			{
+				while (operators.Count > 0 &&
+								operators.Peek() != '(' &&
+								precedence[operators.Peek()] >= precedence[symb]) // приоритет оператора в стеке выше или равен приоритету текущего оператора
+				{
+					output.Add(operators.Pop().ToString());  // добавляем в выражение
+				}
+				operators.Push(symb); // добавляем текущий оператор в стек
+			}
+
+			i++;
+		}
+
+		// Добавляем оставшиеся операторы
+		while (operators.Count > 0)
+		{
+			output.Add(operators.Pop().ToString());
+		}
+		return output;
+
+	}
+
+	// расчет формулы
+	private static decimal EvaluatePostfix(List<string> express)
+	{
+		var stack = new Stack<decimal>();
+
+		foreach (var exp in express)
+		{
+			if (decimal.TryParse(exp, NumberStyles.Any, CultureInfo.InvariantCulture, out var number))
+			{
+				stack.Push(number);
+			}
+			else
+			{
+				var b = stack.Pop();
+				var a = stack.Pop();
+
+				decimal result = exp switch
+				{
+					"+" => a + b,
+					"-" => a - b,
+					"*" => a * b,
+					"/" => b != 0 ? a / b : throw new DivideByZeroException(),
+					"%" => a * b / 100,
+					"^" => (decimal)Math.Pow((double)a, (double)b),
+					_ => throw new InvalidOperationException($"Неизвестный оператор: {exp}")
+				};
+
+				stack.Push(result);
+			}
+		}
+
+		return stack.Pop();
+	}
+
+	// вычисление показателей
+	private async void Calcs()
+	{
+
+		Console.WriteLine("Calcs");
+		await using var db = dbFactory.CreateDbContext();
+		var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
 
 
-    private async Task OnShowTemp()
-    {
-        await tempModal.ShowAsync();
-    }
+		foreach (var arg in args)
+		{
+			// проверить существуют ли данные
 
-    private async Task OnHideTemp()
-    {
-        await tempModal.HideAsync();
-       
-    }
-   
+			Console.WriteLine("arg " + arg.ShortName);
+			string? expression = arg.Expression;
+			string? consist = arg.Consist;
+			Console.WriteLine("exp " + expression + " con " + consist);
+
+			if (string.IsNullOrWhiteSpace(expression) || string.IsNullOrWhiteSpace(consist))
+				continue;
+
+			// Разбиваем на строки и сохраняем с префиксами
+			var rawIds = consist.Split(',', StringSplitOptions.RemoveEmptyEntries)
+					.Select(s => s.Trim())
+					.ToList();
+
+			Console.WriteLine("rawIds ");
+			Console.WriteLine(string.Join(Environment.NewLine, rawIds));
+
+			// Разбиваем по типу источника
+			var (aIds, nIds) = SplitIdsByPrefix(rawIds);
+
+			// Ищем параметры в выражении
+			var paramMatches = Regex.Matches(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}")
+			.Cast<Match>()
+			.Select(m => m.Value)
+			.Distinct()
+			.ToList();
+
+			Console.WriteLine("paramMatches");
+			Console.WriteLine(string.Join(Environment.NewLine, paramMatches));
+
+			if (paramMatches.Count != rawIds.Count)
+			{
+				Console.WriteLine($"Incorrect amount: {arg.Name}");
+				continue;
+			}
+
+			// Строим отображение параметра на ID с учетом позиции
+			Dictionary<string, (char Prefix, int Id)> paramToIdMap = new();
+			for (int i = 0; i < paramMatches.Count; i++)
+			{
+				string rawId = rawIds[i];
+				char prefix = rawId[0]; // 'А' или 'Н'
+				int id = int.Parse(rawId[1..]);
+				paramToIdMap[paramMatches[i]] = (prefix, id);
+			}
+
+			// Загружаем данные из Data101
+			var data101 = await db.Data101s
+				.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
+				.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+
+			// Загружаем данные из DataNor
+			var dataNor = await db.DataNors
+				.Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == info)
+				.ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
+
+			// Подстановка значений в формулу
+			var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}", match =>
+			{
+				string param = match.Value;
+
+				if (paramToIdMap.TryGetValue(param, out var info))
+				{
+					decimal val = 0;
+
+					if (info.Prefix == 'А')
+						val = data101.TryGetValue(info.Id, out var v1) ? v1 ?? 0 : 0;
+					else if (info.Prefix == 'Н')
+						val = dataNor.TryGetValue(info.Id, out var v2) ? v2 ?? 0 : 0;
+
+					return val.ToString("G", CultureInfo.InvariantCulture);
+				}
+				return "0";
+			});
+
+			try
+			{
+				var readyExpr = ToPostfix(parsedExpression);
+				result = Math.Round(EvaluatePostfix(readyExpr), 2);
+
+
+				var existing = await db.MethodsResults
+				.FirstOrDefaultAsync(r => r.IdArg == arg.IdArg && r.IdInfo == info);
+
+				// если данные есть, перезаписать
+				if (existing != null)
+				{
+					// Обновляем существующую запись
+					existing.Val = result;
+				}
+				else
+				{
+					var resultEntity = new MethodsResult
+						{
+							IdInfo = info,
+							IdArg = arg.IdArg,
+							Val = result
+						};
+
+					db.MethodsResults.Add(resultEntity);
+				}
+				await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
+				results[arg.IdArg] = result;
+
+
+				Console.WriteLine($"Itog '{arg.Name}' = {result}");
+				StateHasChanged();
+			}
+			catch (Exception ex)
+			{
+				// если параметр не расчитался - 0 или не сохранять
+				Console.WriteLine($"Error '{expression}': {ex.Message}");
+			}
+		}
+	}
+
+	// разделить параметры по типу источника
+	private (List<int> aIds, List<int> nIds) SplitIdsByPrefix(List<string> rawIds)
+	{
+		var aIds = rawIds.Where(s => s.StartsWith("А", StringComparison.OrdinalIgnoreCase))
+							.Select(s => int.Parse(s[1..]))
+							.ToList();
+
+		var nIds = rawIds.Where(s => s.StartsWith("Н", StringComparison.OrdinalIgnoreCase))
+							.Select(s => int.Parse(s[1..]))
+							.ToList();
+
+		return (aIds, nIds);
+	}
+
+
+
+	private async Task OnShowModalClick()
+	{
+		await modal.ShowAsync();
+	}
+
+	private async Task OnHideModalClick()
+	{
+		await modal.HideAsync();
+	}
+
+
+	private async Task OnShowTemp()
+	{
+		await tempModal.ShowAsync();
+	}
+
+	private async Task OnHideTemp()
+	{
+		await tempModal.HideAsync();
+
+	}
+
 
 }
