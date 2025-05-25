@@ -321,14 +321,10 @@
 
 			// Загружаем данные из Data101
 			var data101 = await Data101Loaded(Regnum, OnDate, info, aIds);
-			/*var data101 = await db.Data101s
-				.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
-				.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);*/
 
 			// Загружаем данные из DataNor
-			var dataNor = await db.DataNors
-				.Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == info)
-				.ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
+			var dataNor = await DataNorLoaded(Regnum, OnDate, info, nIds);
+
 
 			// Подстановка значений в формулу
 			var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}", match =>
@@ -425,6 +421,28 @@
 		return await db.Data101s
 			.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo)
 			.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+	}
+
+	// загрузка значений из нормативов формы с проверкой наличия данных в таблице
+	private async Task<Dictionary<int, decimal?>> DataNorLoaded(
+	int regnum,
+	DateTime dt,
+	int idInfo,
+	List<int> nIds)
+	{
+		await using var db = dbFactory.CreateDbContext();
+
+		bool hasData = await db.DataNors
+			.AnyAsync(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == idInfo);
+
+		if (!hasData)
+		{
+			await CreditService.LoadData135(regnum, dt);
+		}
+
+		return await db.DataNors
+			.Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == idInfo)
+			.ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
 	}
 
 
