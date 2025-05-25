@@ -184,7 +184,7 @@ namespace BlazorApp1
 			// Получаем идентификатор расчета (id_info)
 			int id_info = await CreateLoadInfo(regnum, dt);
 
-			var dataRecords = new List<DataNor>();        // Список новых записей для сохранения
+			var incomingRecords = new List<DataNor>();    // Список новых записей для сохранения
 			var validTnors = new HashSet<int>();          // Список id_tnor, найденных по кодам шаблонов
 
 			// Обход всех таблиц и строк внутри DataSet
@@ -193,6 +193,7 @@ namespace BlazorApp1
 				foreach (DataRow row in table.Rows)
 				{
 					var code = row[codeColumn]?.ToString();
+					// пропуск пустых шаблонов
 					if (string.IsNullOrWhiteSpace(code)) continue;
 
 					// Ищем соответствующий шаблон в базе
@@ -204,14 +205,14 @@ namespace BlazorApp1
 					// Пропускаем, если шаблон не найден
 					if (id_tnor == null) continue;
 
-					// Пробуем распарсить значение
+					// Пробуем распарсить значение кода в decimal
 					if (!decimal.TryParse(row[valueColumn]?.ToString(), out var val)) continue;
 
 					// Добавляем id_tnor в набор для возможного удаления старых записей
 					validTnors.Add(id_tnor.Value);
 
 					// Добавляем запись в список
-					dataRecords.Add(new DataNor
+					incomingRecords.Add(new DataNor
 					{
 						IdInfo = id_info,
 						IdTnor = id_tnor.Value,
@@ -220,28 +221,31 @@ namespace BlazorApp1
 				}
 			}
 
-			// Удаление старых данных, если задан rewrite = true
-			if (rewrite && validTnors.Any())
-			{
-				var toDelete = await db.DataNors
-									   .Where(d => d.IdInfo == id_info && validTnors.Contains(d.IdTnor ?? -1))
-									   .ToListAsync();
+			if (!incomingRecords.Any()) return;
 
-				if (toDelete.Any())
+			// Получаем существующие записи из базы
+			var existingRecords = await db.DataNors
+				.Where(r => r.IdInfo == id_info && r.IdTnor != null && validTnors.Contains(r.IdTnor.Value))
+				.ToListAsync();
+
+			foreach (var newRecord in incomingRecords)
+			{
+				var existing = existingRecords.FirstOrDefault(r => r.IdTnor == newRecord.IdTnor);
+				if (existing != null)
 				{
-					db.DataNors.RemoveRange(toDelete);
-					await db.SaveChangesAsync();
+					// Обновляем существующее значение
+					existing.Val = newRecord.Val;
+				}
+				else
+				{
+					// Добавляем новое
+					db.DataNors.Add(newRecord);
 				}
 			}
 
-			// Сохранение новых данных
-			if (dataRecords.Any())
-			{
-				db.DataNors.AddRange(dataRecords);
-				await db.SaveChangesAsync();
-			}
+			await db.SaveChangesAsync();
 		}
-		
+
 		//загрузка 123 формы в базу
 		public async Task LoadData123(int regnum, DateTime dt)
 		{
