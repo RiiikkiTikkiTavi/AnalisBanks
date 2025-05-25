@@ -454,6 +454,7 @@
 	// формирование excel файла
 	private async Task DownloadExcel()
 	{
+		// !!! проверить есть ли данные
 		var dateOnly = DateOnly.FromDateTime(OnDate);
 		var bytes = await ExcelService.GenerateExcelAsync(dateOnly, Regnum, SelectedMethod);
 		var base64 = Convert.ToBase64String(bytes);

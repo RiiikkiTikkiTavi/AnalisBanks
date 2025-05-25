@@ -14,7 +14,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
-//using static Google.Protobuf.Collections.MapField<TKey, TValue>;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -23,21 +22,6 @@ namespace BlazorApp1
 	public class CreditOrgInfoClient
 	{
 		private readonly CreditOrgInfoSoap _client;
-
-
-		/*		[Inject]
-				private IDbContextFactory<BanksContext> dbFactory { get; set; } = default!;
-
-				public CreditOrgInfoClient()
-				{
-					var binding = new BasicHttpBinding();
-					var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
-
-					var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
-					_client = factory.CreateChannel();
-				}
-
-				*/
 		
 		private readonly IDbContextFactory<BanksContext> dbFactory;
 		public CreditOrgInfoClient(CreditOrgInfoSoap client, IDbContextFactory<BanksContext> dbFactory)
