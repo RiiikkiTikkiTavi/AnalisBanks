@@ -270,6 +270,7 @@
 	private async void Calcs()
 	{
 
+		var dateOnly = DateOnly.FromDateTime(OnDate);
 		Console.WriteLine("Calcs");
 		await using var db = dbFactory.CreateDbContext();
 		var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
@@ -453,7 +454,8 @@
 	// формирование excel файла
 	private async Task DownloadExcel()
 	{
-		var bytes = await ExcelService.GenerateExcelAsync();
+		var dateOnly = DateOnly.FromDateTime(OnDate);
+		var bytes = await ExcelService.GenerateExcelAsync(dateOnly, Regnum, SelectedMethod);
 		var base64 = Convert.ToBase64String(bytes);
 
 		await JS.InvokeVoidAsync("downloadFileFromBytes", "report.xlsx", base64);
