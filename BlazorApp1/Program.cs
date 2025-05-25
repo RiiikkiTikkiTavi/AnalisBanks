@@ -23,6 +23,7 @@ builder.Services.AddDbContextFactory<BanksContext>(options =>
 
 builder.Services.AddBlazorBootstrap();
 
+
 // Регистрируем CreditOrgInfoSoap вручную:
 builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
 {
@@ -34,6 +35,7 @@ builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
 
 // И регистрируем сам клиент
 builder.Services.AddScoped<CreditOrgInfoClient>();
+builder.Services.AddScoped<ExcelService>();
 
 var app = builder.Build();
 

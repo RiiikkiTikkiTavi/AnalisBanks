@@ -6,6 +6,9 @@
 
 @rendermode InteractiveServer
 
+@inject IJSRuntime JS
+@inject ExcelService ExcelService
+
 <h3>Calculate</h3>
 
 <div class="d-flex align-items-start gap-3 flex-wrap">
@@ -23,6 +26,8 @@
 
 
 	<button class="btn btn-primary" @onclick="Calcs">Рассчитать</button>
+	<button class="btn btn-secondary" @onclick="DownloadExcel">Скачать Excel</button>
+
 </div>
 
 @if (args != null && args.Any())
@@ -445,6 +450,14 @@
 			.ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
 	}
 
+	// формирование excel файла
+	private async Task DownloadExcel()
+	{
+		var bytes = await ExcelService.GenerateExcelAsync();
+		var base64 = Convert.ToBase64String(bytes);
+
+		await JS.InvokeVoidAsync("downloadFileFromBytes", "report.xlsx", base64);
+	}
 
 	private async Task OnShowModalClick()
 	{
