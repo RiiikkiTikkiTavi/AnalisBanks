@@ -272,7 +272,7 @@
 
 		foreach (var arg in args)
 		{
-			// проверить существуют ли данные
+			// проверить существуют ли данные расчета
 
 			Console.WriteLine("arg " + arg.ShortName);
 			string? expression = arg.Expression;
@@ -320,9 +320,10 @@
 			}
 
 			// Загружаем данные из Data101
-			var data101 = await db.Data101s
+			var data101 = await Data101Loaded(Regnum, OnDate, info, aIds);
+			/*var data101 = await db.Data101s
 				.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == info)
-				.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+				.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);*/
 
 			// Загружаем данные из DataNor
 			var dataNor = await db.DataNors
@@ -403,6 +404,28 @@
 		return (aIds, nIds);
 	}
 
+	// загрузка значений из 101 формы с проверкой наличия данных в таблице
+	private async Task<Dictionary<int, decimal?>> Data101Loaded(
+	int regnum,
+	DateTime dt,
+	int idInfo,
+	List<int> aIds)
+	{
+		await using var db = dbFactory.CreateDbContext();
+
+		bool hasData = await db.Data101s
+			.AnyAsync(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo);
+
+		if (!hasData)
+		{
+			await CreditService.LoadData101(regnum, dt);
+		}
+
+		// Загружаем и возвращаем данные
+		return await db.Data101s
+			.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo)
+			.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+	}
 
 
 	private async Task OnShowModalClick()
