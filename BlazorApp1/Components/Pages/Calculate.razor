@@ -9,7 +9,7 @@
 @inject IJSRuntime JS
 @inject ExcelService ExcelService
 
-<h3>Calculate</h3>
+<h3>Расчет методик</h3>
 
 <div class="d-flex align-items-start gap-3 flex-wrap">
 	<select @bind="SelectedMethod" class="form-select w-25">
@@ -415,8 +415,12 @@
 	{
 		await using var db = dbFactory.CreateDbContext();
 
+		// Проверяем, что для каждого IdT101 из aIds есть запись в таблице с нужным idInfo
 		bool hasData = await db.Data101s
-			.AnyAsync(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo);
+			.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo)
+			.Select(d => d.IdT101 ?? -1)
+			.Distinct()
+			.CountAsync() == aIds.Count;
 
 		if (!hasData)
 		{
@@ -426,30 +430,41 @@
 		// Загружаем и возвращаем данные
 		return await db.Data101s
 			.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo)
-			.ToDictionaryAsync(d => d.IdT101 ?? -1, d => d.Vint);
+			.GroupBy(d => d.IdT101 ?? -1)
+			.Select(g => new { Id = g.Key, Val = g.FirstOrDefault().Vint })
+			.ToDictionaryAsync(x => x.Id, x => x.Val);
 	}
+
 
 	// загрузка значений из нормативов формы с проверкой наличия данных в таблице
 	private async Task<Dictionary<int, decimal?>> DataNorLoaded(
-	int regnum,
-	DateTime dt,
-	int idInfo,
-	List<int> nIds)
+		int regnum,
+		DateTime dt,
+		int idInfo,
+		List<int> nIds)
 	{
 		await using var db = dbFactory.CreateDbContext();
 
+		// Проверяем, что для каждого IdTnor из nIds есть запись в базе с нужным idInfo
 		bool hasData = await db.DataNors
-			.AnyAsync(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == idInfo);
+			.Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == idInfo)
+			.Select(d => d.IdTnor ?? -1)
+			.Distinct()
+			.CountAsync() == nIds.Count;
 
 		if (!hasData)
 		{
 			await CreditService.LoadData135(regnum, dt);
 		}
 
+		// Загружаем и возвращаем данные с группировкой по ключу, чтобы избежать дубликатов
 		return await db.DataNors
 			.Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == idInfo)
-			.ToDictionaryAsync(d => d.IdTnor ?? -1, d => d.Val);
+			.GroupBy(d => d.IdTnor ?? -1)
+			.Select(g => new { Id = g.Key, Val = g.FirstOrDefault().Val })
+			.ToDictionaryAsync(x => x.Id, x => x.Val);
 	}
+
 
 	// формирование excel файла
 	private async Task DownloadExcel()
