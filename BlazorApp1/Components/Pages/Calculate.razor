@@ -37,7 +37,8 @@
 			<tr>
 				<th>Показатель</th>
 				<th>Формула</th>
-				<th>Значение</th>
+				<th>Текущее значение</th>
+				<th>Прошлое значение</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -46,8 +47,16 @@
 				<tr>
 					<td>@a.Name</td>
 					<td>@a.Expression</td>
-					<td>@(results.TryGetValue(a.IdArg, out var val) ? val.ToString("0.##") : "—")</td>
-
+					<td>
+						@(results.TryGetValue(a.IdArg, out var val)
+										? (val.result1?.ToString("0.##") ?? "—")
+										: "—")
+					</td>
+					<td>
+						@(results.TryGetValue(a.IdArg, out var val1)
+										? (val1.result2?.ToString("0.##") ?? "—")
+										: "—")
+					</td>
 				</tr>
 			}
 		</tbody>
@@ -101,7 +110,7 @@
 
 	private List<Method> methods = new(); // Список методик
 	private List<Argument> args;
-	private Dictionary<int, decimal> results = new();
+	private Dictionary<int, (decimal? result1, decimal? result2)> results = new();
 	private Argument Arg { get; set; } = new();
 
 	private MethodsResult Result { get; set; } = new();
@@ -269,12 +278,9 @@
 	// вычисление показателей
 	private async void Calcs()
 	{
-
-		var dateOnly = DateOnly.FromDateTime(OnDate);
+		var previousMonth = OnDate.AddMonths(-1);
 		Console.WriteLine("Calcs");
 		await using var db = dbFactory.CreateDbContext();
-		var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
-
 
 		foreach (var arg in args)
 		{
@@ -325,53 +331,10 @@
 				paramToIdMap[paramMatches[i]] = (prefix, id);
 			}
 
-			// Загружаем данные из Data101
-			var data101 = await Data101Loaded(Regnum, OnDate, info, aIds);
+			decimal? result1 = await GetResult(expression, paramToIdMap, arg.IdArg, Regnum, OnDate, aIds, nIds);
+			decimal? result2 = await GetResult(expression, paramToIdMap, arg.IdArg, Regnum, previousMonth, aIds, nIds);
 
-			// Загружаем данные из DataNor
-			var dataNor = await DataNorLoaded(Regnum, OnDate, info, nIds);
-
-			// Подстановка значений в формулу
-			var parsedExpression = SubstituteParameters(expression, paramToIdMap, data101, dataNor);
-
-			try
-			{
-				var readyExpr = ToPostfix(parsedExpression);
-				result = Math.Round(EvaluatePostfix(readyExpr), 2);
-
-
-				var existing = await db.MethodsResults
-				.FirstOrDefaultAsync(r => r.IdArg == arg.IdArg && r.IdInfo == info);
-
-				// если данные есть, перезаписать
-				if (existing != null)
-				{
-					// Обновляем существующую запись
-					existing.Val = result;
-				}
-				else
-				{
-					var resultEntity = new MethodsResult
-						{
-							IdInfo = info,
-							IdArg = arg.IdArg,
-							Val = result
-						};
-
-					db.MethodsResults.Add(resultEntity);
-				}
-				await db.SaveChangesAsync(); // Асинхронное сохранение в базу данных
-				results[arg.IdArg] = result;
-
-
-				Console.WriteLine($"Itog '{arg.Name}' = {result}");
-				StateHasChanged();
-			}
-			catch (Exception ex)
-			{
-				// если параметр не расчитался - 0 или не сохранять?
-				Console.WriteLine($"Error '{expression}': {ex.Message}");
-			}
+			results[arg.IdArg] = (result1, result2);
 		}
 	}
 
@@ -467,6 +430,62 @@
 			.GroupBy(d => d.IdTnor ?? -1)
 			.Select(g => new { Id = g.Key, Val = g.FirstOrDefault().Val })
 			.ToDictionaryAsync(x => x.Id, x => x.Val);
+	}
+
+
+	private async Task<decimal?> GetResult(
+	string expression,
+	Dictionary<string, (char Prefix, int Id)> paramToIdMap,
+	int argId,
+	int regnum,
+	DateTime onDate,
+	List<int> aIds,
+	List<int> nIds)
+	{
+		await using var db = dbFactory.CreateDbContext();
+
+		var info = await CreditService.CreateLoadInfo(Regnum, OnDate);
+
+		// Загружаем данные из источников
+		var data101 = await Data101Loaded(regnum, onDate, info, aIds);
+		var dataNor = await DataNorLoaded(regnum, onDate, info, nIds);
+
+		// Подстановка значений в выражение
+		var parsedExpression = SubstituteParameters(expression, paramToIdMap, data101, dataNor);
+
+		try
+		{
+			var readyExpr = ToPostfix(parsedExpression);
+			var result = Math.Round(EvaluatePostfix(readyExpr), 2);
+
+			var existing = await db.MethodsResults
+				.FirstOrDefaultAsync(r => r.IdArg == argId && r.IdInfo == info);
+
+			if (existing != null)
+			{
+				existing.Val = result;
+			}
+			else
+			{
+				db.MethodsResults.Add(new MethodsResult
+					{
+						IdInfo = info,
+						IdArg = argId,
+						Val = result
+					});
+			}
+
+			await db.SaveChangesAsync();
+			Console.WriteLine($"Itog ' = {result}");
+			StateHasChanged();
+
+			return result;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error '{expression}': {ex.Message}");
+			return null;
+		}
 	}
 
 
