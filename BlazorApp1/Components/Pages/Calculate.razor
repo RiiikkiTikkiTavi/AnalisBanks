@@ -417,10 +417,7 @@
 
 		// Проверяем, что для каждого IdT101 из aIds есть запись в таблице с нужным idInfo
 		bool hasData = await db.Data101s
-			.Where(d => aIds.Contains(d.IdT101 ?? -1) && d.IdInfo == idInfo)
-			.Select(d => d.IdT101 ?? -1)
-			.Distinct()
-			.CountAsync() == aIds.Count;
+	.AnyAsync(d => d.IdInfo == idInfo);
 
 		if (!hasData)
 		{
@@ -447,10 +444,7 @@
 
 		// Проверяем, что для каждого IdTnor из nIds есть запись в базе с нужным idInfo
 		bool hasData = await db.DataNors
-			.Where(d => nIds.Contains(d.IdTnor ?? -1) && d.IdInfo == idInfo)
-			.Select(d => d.IdTnor ?? -1)
-			.Distinct()
-			.CountAsync() == nIds.Count;
+	.AnyAsync(d => d.IdInfo == idInfo);
 
 		if (!hasData)
 		{
