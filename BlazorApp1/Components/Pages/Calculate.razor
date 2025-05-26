@@ -331,25 +331,8 @@
 			// Загружаем данные из DataNor
 			var dataNor = await DataNorLoaded(Regnum, OnDate, info, nIds);
 
-
 			// Подстановка значений в формулу
-			var parsedExpression = Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}", match =>
-			{
-				string param = match.Value;
-
-				if (paramToIdMap.TryGetValue(param, out var info))
-				{
-					decimal val = 0;
-
-					if (info.Prefix == 'А')
-						val = data101.TryGetValue(info.Id, out var v1) ? v1 ?? 0 : 0;
-					else if (info.Prefix == 'Н')
-						val = dataNor.TryGetValue(info.Id, out var v2) ? v2 ?? 0 : 0;
-
-					return val.ToString("G", CultureInfo.InvariantCulture);
-				}
-				return "0";
-			});
+			var parsedExpression = SubstituteParameters(expression, paramToIdMap, data101, dataNor);
 
 			try
 			{
@@ -386,7 +369,7 @@
 			}
 			catch (Exception ex)
 			{
-				// если параметр не расчитался - 0 или не сохранять
+				// если параметр не расчитался - 0 или не сохранять?
 				Console.WriteLine($"Error '{expression}': {ex.Message}");
 			}
 		}
@@ -405,6 +388,33 @@
 
 		return (aIds, nIds);
 	}
+
+	// подстановка значений в формулу
+	private string SubstituteParameters(
+	string expression,
+	Dictionary<string, (char Prefix, int Id)> paramToIdMap,
+	Dictionary<int, decimal?> data101,
+	Dictionary<int, decimal?> dataNor)
+	{
+		return Regex.Replace(expression, @"\{(?:([АН]))?(\d+(?:\.\d+)*)([ПА]?)\}", match =>
+		{
+			string param = match.Value;
+
+			if (paramToIdMap.TryGetValue(param, out var info))
+			{
+				decimal val = 0;
+
+				if (info.Prefix == 'А')
+					val = data101.TryGetValue(info.Id, out var v1) ? v1 ?? 0 : 0;
+				else if (info.Prefix == 'Н')
+					val = dataNor.TryGetValue(info.Id, out var v2) ? v2 ?? 0 : 0;
+
+				return val.ToString("G", CultureInfo.InvariantCulture);
+			}
+			return "0";
+		});
+	}
+
 
 	// загрузка значений из 101 формы с проверкой наличия данных в таблице
 	private async Task<Dictionary<int, decimal?>> Data101Loaded(
