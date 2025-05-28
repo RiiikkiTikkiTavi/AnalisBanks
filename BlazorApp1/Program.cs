@@ -1,6 +1,10 @@
 using BlazorApp1;
 using BlazorApp1.Components;
 using BlazorApp1.Models;
+using Blazorise;
+using Blazorise.Bootstrap;
+using Blazorise.Charts;
+using Blazorise.Icons.FontAwesome;
 using CregitInfoWS;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -24,7 +28,7 @@ builder.Services.AddDbContextFactory<BanksContext>(options =>
 builder.Services.AddBlazorBootstrap();
 
 
-// Регистрируем CreditOrgInfoSoap вручную:
+
 builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
 {
 	var binding = new BasicHttpBinding();
@@ -33,9 +37,18 @@ builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
 	return factory.CreateChannel();
 });
 
-// И регистрируем сам клиент
+
 builder.Services.AddScoped<CreditOrgInfoClient>();
+
 builder.Services.AddScoped<ExcelService>();
+
+builder.Services
+	.AddBlazorise(options =>
+	{
+		options.Immediate = true;
+	})
+	.AddBootstrapProviders()
+	.AddFontAwesomeIcons();
 
 var app = builder.Build();
 

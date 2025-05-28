@@ -3,6 +3,7 @@
 @using BlazorBootstrap
 @using System.Text.RegularExpressions
 @using System.Globalization
+@using Blazorise.Charts
 
 @rendermode InteractiveServer
 
@@ -61,7 +62,13 @@
 			}
 		</tbody>
 	</table>
+	
 }
+@if (showChart)
+{
+	<Blazorise.Charts.BarChart TItem="double" @ref="barChart" />
+}
+
 
 <!--else
 {
@@ -123,6 +130,9 @@
 
 	private bool ShowToast { get; set; } = false;
 	private string ToastMessage { get; set; } = string.Empty;
+
+	private BarChart<double> barChart;
+	private bool showChart = false;
 
 
 	private async Task LoadMethods()
@@ -343,6 +353,9 @@
 			decimal? result2 = await GetResult(expression, paramToIdMap, arg.IdArg, Regnum, previousMonth, aIds, nIds);
 
 			results[arg.IdArg] = (result1, result2);
+			showChart = true;
+			StateHasChanged();
+			await DrawChartAsync();
 		}
 	}
 
@@ -533,6 +546,45 @@
 		return true;
 	}
 
+	
+	private async Task DrawChartAsync()
+	{
+		if (barChart is null)
+        return;
+
+		var labels = args.Select(a => a.Name).ToList();
+
+		var currentValues = args.Select(a =>
+			results.TryGetValue(a.IdArg, out var val)
+				? (double)(val.result1 ?? 0m)
+				: 0.0).ToList();
+
+		var previousValues = args.Select(a =>
+			results.TryGetValue(a.IdArg, out var val)
+				? (double)(val.result2 ?? 0m)
+				: 0.0).ToList();
+
+		var datasetCurrent = new BarChartDataset<double>
+			{
+				Label = "Текущий период",
+				Data = currentValues,
+				BackgroundColor = "rgba(54, 162, 235, 0.2)",
+				BorderColor = "rgba(54, 162, 235, 1)",
+				BorderWidth = 1
+			};
+
+		var datasetPrevious = new BarChartDataset<double>
+			{
+				Label = "Прошлый период",
+				Data = previousValues,
+				BackgroundColor = "rgba(255, 206, 86, 0.2)",
+				BorderColor = "rgba(255, 206, 86, 1)",
+				BorderWidth = 1
+			};
+
+		await barChart.Clear();
+		await barChart.AddLabelsDatasetsAndUpdate(labels, datasetCurrent, datasetPrevious);
+	}
 
 	private async Task OnShowModalClick()
 	{
