@@ -68,17 +68,20 @@
 	<div class="text-muted mt-3">Нет показателей для выбранной методики.</div>
 	не работает
 }-->
-<!--Модальное окно выбора показателя-->
-<!--В GetItemSelected пердается id и тип выбранной строки-->
-<Modal @ref="tempModal" Title="Выбрать показатель" Class="modal-lg">
-	<BodyTemplate>
-		<FormsTemplate />
-	</BodyTemplate>
-	<FooterTemplate>
-		<Button class="btn btn-secondary" @onclick="OnHideTemp">Закрыть</Button>
-	</FooterTemplate>
-</Modal>
 
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+	<div class="toast show" role="alert" aria-live="assertive" aria-atomic="true"
+		 style="min-width: 250px;" hidden="@(!ShowToast)">
+		<div class="toast-header">
+			<strong class="me-auto">Ошибка</strong>
+			<button type="button" class="btn-close" @onclick="() => ShowToast = false"></button>
+		</div>
+		<div class="toast-body">
+			@ToastMessage
+		</div>
+	</div>
+</div>
 
 
 
@@ -118,6 +121,8 @@
 	public int Regnum { get => regnum; set => regnum = value; }
 	public DateTime OnDate { get => onDate; set => onDate = value; }
 
+	private bool ShowToast { get; set; } = false;
+	private string ToastMessage { get; set; } = string.Empty;
 
 
 	private async Task LoadMethods()
@@ -278,6 +283,8 @@
 	// вычисление показателей
 	private async void Calcs()
 	{
+		if (!ValidateInputs()) return;
+
 		var previousMonth = OnDate.AddMonths(-1);
 
 		Console.WriteLine($"date {previousMonth}");
@@ -494,13 +501,38 @@
 	// формирование excel файла
 	private async Task DownloadExcel()
 	{
-		// !!! проверить есть ли данные
+		if (!ValidateInputs()) return;
 		var dateOnly = DateOnly.FromDateTime(OnDate);
 		var bytes = await ExcelService.GenerateExcelAsync(dateOnly, Regnum, SelectedMethod);
 		var base64 = Convert.ToBase64String(bytes);
 
 		await JS.InvokeVoidAsync("downloadFileFromBytes", "report.xlsx", base64);
 	}
+
+	private bool ValidateInputs()
+	{
+		if (SelectedMethod == 0)
+		{
+			ToastMessage = "Выберите методику.";
+			ShowToast = true;
+			return false;
+		}
+		if (Regnum == 0)
+		{
+			ToastMessage = "Введите РегНомер.";
+			ShowToast = true;
+			return false;
+		}
+		if (OnDate == default)
+		{
+			ToastMessage = "Выберите дату.";
+			ShowToast = true;
+			return false;
+		}
+
+		return true;
+	}
+
 
 	private async Task OnShowModalClick()
 	{
