@@ -1,0 +1,68 @@
+﻿@page "/banksList"
+
+@using BlazorApp1.Models
+@inject NavigationManager NavigationManager
+
+<h3>Данные о кредитных организациях</h3>
+
+@if (methods == null)
+{
+    <p>Загрузка данных...</p>
+}
+else
+{
+    <table class="table" oncontextmenu="return false;">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Описание</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var method in methods)
+            {
+                <tr @oncontextmenu="e => ShowContextMenu(e, method)">
+                    <td>@method.IdMethods</td>
+                    <td>@method.Name</td>
+                    <td>@method.Descr</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<!-- Контекстное меню -->
+@if (showMenu)
+{
+    <div class="context-menu" style="top:@menuY; left:@menuX;">
+        <ul class="dropdown-menu show">
+            <li><a class="dropdown-item" @onclick="EditMethod">Редактировать</a></li>
+            <li><a class="dropdown-item text-danger" @onclick="DeleteMethod">Удалить</a></li>
+        </ul>
+    </div>
+}
+
+<style>
+    .context-menu {
+        position: absolute;
+        z-index: 1000;
+    }
+</style>
+
+@code {
+    [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
+    [Inject] private CreditOrgInfoClient CreditService { get; set; }
+
+    private async Task LoadMethods()
+    {
+        methods = await DbContext.Methods.ToListAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загружаем данные из базы данных
+        await LoadMethods();
+    }
+
+}

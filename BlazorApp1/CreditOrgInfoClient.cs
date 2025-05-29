@@ -71,8 +71,14 @@ namespace BlazorApp1
 			return orgNameNode?.InnerText ?? "";
 		}
 
-		// получение данных по форме 123 по рег. номеру банка и дате
-		public async Task<DataSet> GetData123(int regnum, DateTime dt)
+        public async Task<List<XElement>> SearchByNameAsync(string namePart)
+        {
+            var result = await _client.SearchByNameAsync(namePart);
+            return result?.ToList() ?? new List<XElement>();
+        }
+
+        // получение данных по форме 123 по рег. номеру банка и дате
+        public async Task<DataSet> GetData123(int regnum, DateTime dt)
 		{
 			var response = await _client.Data123FormFullAsync(regnum, dt);
 
