@@ -10,6 +10,7 @@ using System;
 using System.Data;
 using System.Linq;
 using System.ServiceModel;
+using System.ServiceModel.Channels;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -22,15 +23,19 @@ namespace BlazorApp1
 	public class CreditOrgInfoClient
 	{
 		private readonly CreditOrgInfoSoap _client;
-		
-		private readonly IDbContextFactory<BanksContext> dbFactory;
+        
+
+        private readonly IDbContextFactory<BanksContext> dbFactory;
 		public CreditOrgInfoClient(CreditOrgInfoSoap client, IDbContextFactory<BanksContext> dbFactory)
 		{
 			_client = client;
 			this.dbFactory = dbFactory;
+
 		}
 
-		private bool rewrite = false;
+        
+
+        private bool rewrite = false;
 
 		//вспомогательный метод - вывод dataset в консоль
 		private void ShowDataSet(DataSet dataSet)
@@ -71,10 +76,25 @@ namespace BlazorApp1
 			return orgNameNode?.InnerText ?? "";
 		}
 
-        public async Task<List<XElement>> SearchByNameAsync(string namePart)
+        /*public async Task<List<XElement>> SearchByNameAsync(string namePart)
         {
             var result = await _client.SearchByNameAsync(namePart);
             return result?.ToList() ?? new List<XElement>();
+        }*/
+
+        public async Task<DataSet> GetCreditOrgInfoAsync()
+        {
+            // Вызов метода из веб-сервиса
+            XmlNode xmlNode = await _client.EnumBIC_XMLAsync();
+
+            // Преобразование XmlNode в DataSet
+            DataSet ds = new DataSet();
+            using (XmlReader xmlReader = new XmlNodeReader(xmlNode))
+            {
+                ds.ReadXml(xmlReader);
+            }
+
+            return ds;
         }
 
         // получение данных по форме 123 по рег. номеру банка и дате

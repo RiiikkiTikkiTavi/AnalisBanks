@@ -1,38 +1,52 @@
 ﻿@page "/banksList"
 
 @using BlazorApp1.Models
+@using System.Data
 @inject NavigationManager NavigationManager
 
-<h3>Данные о кредитных организациях</h3>
+<h3>Кредитные организации</h3>
 
-@if (methods == null)
+<input @bind="searchText" @bind:event="oninput" placeholder="Введите наименование..." class="form-control" />
+
+@if (dataSet == null)
 {
-    <p>Загрузка данных...</p>
+    <p>Загрузка...</p>
 }
+
 else
 {
-    <table class="table" oncontextmenu="return false;">
+    <table class="table">
         <thead>
             <tr>
-                <th>ID</th>
-                <th>Название</th>
-                <th>Описание</th>
+                @foreach (DataColumn column in dataSet.Tables[0].Columns)
+                {
+                    <th>@column.ColumnName</th>
+                }
             </tr>
         </thead>
         <tbody>
-            @foreach (var method in methods)
-            {
-                <tr @oncontextmenu="e => ShowContextMenu(e, method)">
-                    <td>@method.IdMethods</td>
-                    <td>@method.Name</td>
-                    <td>@method.Descr</td>
-                </tr>
-            }
+            @{
+                int maxRows = Math.Min(10, allRows.Rows.Count);
+                for (int i = 0; i < maxRows; i++)
+                {
+                    var row = allRows.Rows[i];
+                    <tr>
+                        @foreach (DataColumn column in allRows.Columns)
+                        {
+                            <td>@row[column]</td>
+                        }
+                    </tr>
+                }
+                }
+
+
+            
         </tbody>
     </table>
 }
 
 <!-- Контекстное меню -->
+<!--
 @if (showMenu)
 {
     <div class="context-menu" style="top:@menuY; left:@menuX;">
@@ -50,13 +64,46 @@ else
     }
 </style>
 
+-->
+
 @code {
     [Inject] private IDbContextFactory<BanksContext> dbFactory { get; set; }
     [Inject] private CreditOrgInfoClient CreditService { get; set; }
 
+
+    private DataSet? dataSet;
+    private DataTable? allRows;
+    private IEnumerable<DataRow>? filteredRows;
+    private string searchText = string.Empty;
+
+
     private async Task LoadMethods()
     {
-        methods = await DbContext.Methods.ToListAsync();
+        await using var db = dbFactory.CreateDbContext();
+        dataSet = await CreditService.GetCreditOrgInfoAsync();
+        allRows = dataSet.Tables[0];
+        foreach (DataColumn column in allRows.Columns)
+        {
+            Console.WriteLine(column.ColumnName); // или Log, или добавь в список
+        }
+        //ApplyFilter();
+    }
+    private void ApplyFilter()
+    {
+        if (allRows == null) return;
+
+        filteredRows = allRows.AsEnumerable()
+            .Where(r => r["NameP"].ToString()!.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private string SearchText
+    {
+        get => searchText;
+        set
+        {
+            searchText = value;
+            ApplyFilter();
+        }
     }
 
     protected override async Task OnInitializedAsync()

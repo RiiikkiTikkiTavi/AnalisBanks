@@ -31,12 +31,24 @@ builder.Services.AddBlazorBootstrap();
 
 builder.Services.AddScoped<CreditOrgInfoSoap>(_ =>
 {
-	var binding = new BasicHttpBinding();
-	var endpoint = new EndpointAddress("http://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx");
-	var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
-	return factory.CreateChannel();
-});
+    var binding = new BasicHttpBinding(BasicHttpSecurityMode.Transport) // для HTTPS
+    {
+        MaxReceivedMessageSize = 1024 * 1024 * 10, // 10 МБ, можно больше
+        ReaderQuotas = new System.Xml.XmlDictionaryReaderQuotas
+        {
+            MaxDepth = 64,
+            MaxStringContentLength = 1024 * 1024,
+            MaxArrayLength = 1024 * 1024,
+            MaxBytesPerRead = 4096,
+            MaxNameTableCharCount = 1024 * 1024
+        }
+    };
 
+    var endpoint = new EndpointAddress("https://www.cbr.ru/CreditInfoWebServ/CreditOrgInfo.asmx"); // HTTPS!
+
+    var factory = new ChannelFactory<CreditOrgInfoSoap>(binding, endpoint);
+    return factory.CreateChannel();
+});
 
 builder.Services.AddScoped<CreditOrgInfoClient>();
 
