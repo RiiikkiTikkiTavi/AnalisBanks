@@ -6,7 +6,9 @@
 
 <h3>Кредитные организации</h3>
 
-<input @bind="searchText" @bind:event="oninput" placeholder="Введите наименование..." class="form-control" />
+<input @bind="searchText" placeholder="Введите наименование..." class="form-control mb-2" />
+<button class="btn btn-primary mb-3" @onclick="ApplyFilter">Поиск</button>
+
 
 @if (dataSet == null)
 {
@@ -18,23 +20,20 @@ else
     <table class="table">
         <thead>
             <tr>
-                @foreach (DataColumn column in dataSet.Tables[0].Columns)
-                {
-                    <th>@column.ColumnName</th>
-                }
+                <th>Дата регистрации</th>
+                <th>Наименование</th>
+                <th>Регистрационный номер</th>
             </tr>
         </thead>
         <tbody>
             @{
-                int maxRows = Math.Min(10, allRows.Rows.Count);
-                for (int i = 0; i < maxRows; i++)
+
+                @foreach (DataRow row in allRows.Rows)
                 {
-                    var row = allRows.Rows[i];
                     <tr>
-                        @foreach (DataColumn column in allRows.Columns)
-                        {
-                            <td>@row[column]</td>
-                        }
+                        <td>@row["RC"]</td>
+                        <td>@row["NM"]</td>
+                        <td>@row["cregnr"]</td>
                     </tr>
                 }
                 }
@@ -74,7 +73,7 @@ else
     private DataSet? dataSet;
     private DataTable? allRows;
     private IEnumerable<DataRow>? filteredRows;
-    private string searchText = string.Empty;
+    private string searchText;
 
 
     private async Task LoadMethods()
@@ -88,22 +87,20 @@ else
         }
         //ApplyFilter();
     }
+
     private void ApplyFilter()
     {
-        if (allRows == null) return;
-
-        filteredRows = allRows.AsEnumerable()
-            .Where(r => r["NameP"].ToString()!.Contains(searchText, StringComparison.OrdinalIgnoreCase));
-    }
-
-    private string SearchText
-    {
-        get => searchText;
-        set
+        if (string.IsNullOrWhiteSpace(searchText))
         {
-            searchText = value;
-            ApplyFilter();
+            filteredRows = allRows.Rows.Cast<DataRow>().ToList();
         }
+        else
+        {
+            filteredRows = allRows.Rows.Cast<DataRow>()
+                .Where(row => row["NM"]?.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+        }
+        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()
