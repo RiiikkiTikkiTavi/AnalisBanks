@@ -82,20 +82,60 @@ namespace BlazorApp1
             return result?.ToList() ?? new List<XElement>();
         }*/
 
+		// вывод списка всех банков
         public async Task<DataSet> GetCreditOrgInfoAsync()
         {
-            // Вызов метода из веб-сервиса
             XmlNode xmlNode = await _client.EnumBIC_XMLAsync();
 
-            // Преобразование XmlNode в DataSet
-            DataSet ds = new DataSet();
+            DataSet originalDs = new DataSet();
             using (XmlReader xmlReader = new XmlNodeReader(xmlNode))
             {
-                ds.ReadXml(xmlReader);
+                originalDs.ReadXml(xmlReader);
             }
 
-            return ds;
+            DataTable sourceTable = originalDs.Tables[0];
+
+            // Создаём новый DataTable
+            DataTable newTable = new DataTable("FilteredBIC");
+            newTable.Columns.Add("RC", typeof(string));
+            newTable.Columns.Add("NM", typeof(string));
+            newTable.Columns.Add("cregnr", typeof(string));
+            newTable.Columns.Add("intCode", typeof(string));
+
+            // Копируем данные
+            foreach (DataRow row in sourceTable.Rows)
+            {
+                DataRow newRow = newTable.NewRow();
+
+                // Преобразуем RC в dd.MM.yyyy
+                if (DateTime.TryParse(row["RC"]?.ToString(), out DateTime date))
+                    newRow["RC"] = date.ToString("dd.MM.yyyy");
+                else
+                    newRow["RC"] = "";
+
+                newRow["NM"] = row["NM"]?.ToString();
+                newRow["cregnr"] = row["cregnr"]?.ToString();
+                newRow["intCode"] = row["intCode"]?.ToString();
+
+                bool allEmpty = newRow.ItemArray.All(item =>
+        item == null || string.IsNullOrWhiteSpace(item.ToString()));
+
+                if (!allEmpty)
+                {
+                    newTable.Rows.Add(newRow);
+                }
+            }
+
+            // Создаём итоговый DataSet и добавляем таблицу
+            DataSet filteredDs = new DataSet();
+            filteredDs.Tables.Add(newTable);
+
+            ShowDataSet(filteredDs);
+
+            return filteredDs;
         }
+
+
 
         // получение данных по форме 123 по рег. номеру банка и дате
         public async Task<DataSet> GetData123(int regnum, DateTime dt)
