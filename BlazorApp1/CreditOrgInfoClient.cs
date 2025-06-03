@@ -38,7 +38,7 @@ namespace BlazorApp1
         private bool rewrite = false;
 
 		//вспомогательный метод - вывод dataset в консоль
-		private void ShowDataSet(DataSet dataSet)
+		public void ShowDataSet(DataSet dataSet)
 		{
 			foreach (DataTable table in dataSet.Tables)
 			{

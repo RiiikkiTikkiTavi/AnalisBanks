@@ -4,17 +4,16 @@
 @using System.Data
 @inject NavigationManager NavigationManager
 
+@rendermode InteractiveServer
+
 <h3>Кредитные организации</h3>
 
 <input @bind="searchText" placeholder="Введите наименование..." class="form-control mb-2" />
-<button class="btn btn-primary mb-3" @onclick="ApplyFilter">Поиск</button>
-
 
 @if (dataSet == null)
 {
     <p>Загрузка...</p>
 }
-
 else
 {
     <table class="table">
@@ -28,7 +27,10 @@ else
         <tbody>
             @{
 
-                @foreach (DataRow row in allRows.Rows)
+              //  @foreach (DataRow row in (filteredRows ?? allRows.Rows.Cast<DataRow>()))
+                @foreach (DataRow row in allRows.Rows.Cast<DataRow>()
+        .Where(r => string.IsNullOrWhiteSpace(searchText) ||
+        r["NM"]?.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase) == true))
                 {
                     <tr>
                         <td>@row["RC"]</td>
@@ -36,7 +38,7 @@ else
                         <td>@row["cregnr"]</td>
                     </tr>
                 }
-                }
+            }
 
 
             
@@ -85,23 +87,8 @@ else
         {
             Console.WriteLine(column.ColumnName); // или Log, или добавь в список
         }
-        //ApplyFilter();
     }
 
-    private void ApplyFilter()
-    {
-        if (string.IsNullOrWhiteSpace(searchText))
-        {
-            filteredRows = allRows.Rows.Cast<DataRow>().ToList();
-        }
-        else
-        {
-            filteredRows = allRows.Rows.Cast<DataRow>()
-                .Where(row => row["NM"]?.ToString().Contains(searchText, StringComparison.OrdinalIgnoreCase) == true)
-                .ToList();
-        }
-        StateHasChanged();
-    }
 
     protected override async Task OnInitializedAsync()
     {
