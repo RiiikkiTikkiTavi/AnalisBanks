@@ -76,11 +76,6 @@ namespace BlazorApp1
 			return orgNameNode?.InnerText ?? "";
 		}
 
-        /*public async Task<List<XElement>> SearchByNameAsync(string namePart)
-        {
-            var result = await _client.SearchByNameAsync(namePart);
-            return result?.ToList() ?? new List<XElement>();
-        }*/
 
 		// вывод списка всех банков
         public async Task<DataSet> GetCreditOrgInfoAsync()
@@ -135,6 +130,49 @@ namespace BlazorApp1
             return filteredDs;
         }
 
+        public async Task LoadDataBank()
+        {
+            var response = await GetCreditOrgInfoAsync();
+            await using var db = dbFactory?.CreateDbContext();
+
+            if (db == null)
+            {
+                Console.WriteLine("Ошибка: dbFactory == null");
+                return;
+            }
+
+            var newRecords = new List<Bank>();
+
+            foreach (var table in response.Tables.Cast<DataTable>())
+            {
+                foreach (DataRow row in table.Rows)
+                {
+                    string? cregnrStr = row["cregnr"]?.ToString();
+                    string? name = row["NM"]?.ToString();
+
+                    // Проверка: cregnr должно быть числом, name не должен быть пустым
+                    if (string.IsNullOrWhiteSpace(cregnrStr) || !int.TryParse(cregnrStr, out int regnum))
+                        continue;
+					if (cregnrStr=="1000") continue;
+
+                    if (string.IsNullOrWhiteSpace(name))
+                        continue;
+
+                    // Добавляем запись
+                    newRecords.Add(new Bank
+                    {
+                        Regnum = regnum,
+                        Name = name
+                    });
+                }
+            }
+
+            if (newRecords.Any())
+            {
+                db.Banks.AddRange(newRecords);
+                await db.SaveChangesAsync();
+            }
+        }
 
 
         // получение данных по форме 123 по рег. номеру банка и дате
