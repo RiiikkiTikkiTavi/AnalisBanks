@@ -3,11 +3,9 @@ using BlazorApp1.Components;
 using BlazorApp1.Models;
 using Blazorise;
 using Blazorise.Bootstrap;
-using Blazorise.Charts;
 using Blazorise.Icons.FontAwesome;
 using CregitInfoWS;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using System.ServiceModel;
 
 
@@ -61,6 +59,20 @@ builder.Services
 	})
 	.AddBootstrapProviders()
 	.AddFontAwesomeIcons();
+
+builder.Services.AddOidcAuthentication(options =>
+{
+    builder.Configuration.Bind("Google", options.ProviderOptions);
+
+    options.ProviderOptions.Authority = "https://accounts.google.com";
+    options.ProviderOptions.ClientId = "{41036326306-7iihk5gbbit6tb6d3agrnoddpggiiqrg.apps.googleusercontent.com}";
+    options.ProviderOptions.ResponseType = "code";
+    options.ProviderOptions.DefaultScopes.Add("openid");
+    options.ProviderOptions.DefaultScopes.Add("profile");
+    options.ProviderOptions.DefaultScopes.Add("email");
+
+    // redirect uri (по умолчанию /authentication/login-callback)
+});
 
 var app = builder.Build();
 
