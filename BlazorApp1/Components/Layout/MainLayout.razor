@@ -1,4 +1,9 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
 
 <div class="page">
     <div class="sidebar">
@@ -7,6 +12,16 @@
 
     <main>
         <div class="top-row px-4">
+            <AuthorizeView>
+                <Authorized>
+                    <span>Привет, @context.User.Identity?.Name!</span>
+                    <a href="/logout" class="btn btn-outline-secondary">Выйти</a>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login" class="btn btn-primary">Войти с Google</a>
+                </NotAuthorized>
+            </AuthorizeView>
+
             <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
         </div>
 
@@ -21,3 +36,5 @@
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+
+

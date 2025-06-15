@@ -1,0 +1,20 @@
+﻿@page "/login"
+@using Microsoft.AspNetCore.Authentication
+@inject NavigationManager Navigation
+@inject IHttpContextAccessor HttpContextAccessor
+
+@code {
+    protected override void OnInitialized()
+    {
+        var context = HttpContextAccessor.HttpContext;
+
+        // Запускаем внешнюю аутентификацию (Google)
+        context.ChallengeAsync("Google", new AuthenticationProperties
+            {
+                RedirectUri = "/"
+            });
+
+        // Навигация нужна только на случай, если редирект не сработает
+        Navigation.NavigateTo("/");
+    }
+}
